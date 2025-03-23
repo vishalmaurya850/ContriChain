@@ -1,19 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  experimental: { serverActions: true },
+  experimental: {
+    serverActions: {}, // ✅ Set as an object instead of boolean
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
+        fs: false,
+        dns: false,
         net: false,
         tls: false,
-        fs: false,
-        child_process: false,
-        'timers/promises': false,
-        dns: false,
-        socks: false,
-        aws4: false,
-        'mongodb-client-encryption': false,
+        "mongodb-client-encryption": false,
+        "kerberos": false,
+        "@mongodb-js/zstd": false,
+        "@aws-sdk/credential-providers": false,
       };
     }
     return config;
