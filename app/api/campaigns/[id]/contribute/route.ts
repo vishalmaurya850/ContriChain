@@ -8,6 +8,7 @@ import { z } from "zod"
 import { ethers, JsonRpcProvider } from "ethers"
 import { getCrowdfundingContract } from "@/lib/contract-utils"
 import { contractAddress } from "@/lib/contract-address"
+import { NextRequest } from "next/server";
 
 // Schema for contribution
 const contributionSchema = z.object({
@@ -15,7 +16,8 @@ const contributionSchema = z.object({
   transactionHash: z.string(),
 })
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: { id: string } }) {
+  const { params } = context;
   const session = await getServerSession(authOptions)
 
   if (!session) {
@@ -46,6 +48,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     // Get user data
+    if (!session.user.id) {
+      return NextResponse.json({ error: "User ID is missing" }, { status: 400 })
+    }
     const user = await getUserById(session.user.id)
 
     if (!user) {
