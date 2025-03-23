@@ -2,20 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { getCampaignById, updateCampaign, deleteCampaign } from "@/lib/campaign-service"
-
-// Extend the Session type to include id and isAdmin
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string
-      isAdmin: boolean
-      walletAddress: string | null
-      name?: string | null
-      email?: string | null
-      image?: string | null
-    }
-  }
-}
+import { isAdmin } from "@/lib/admin-service"
 import { z } from "zod"
 
 // Schema for campaign updates
@@ -57,7 +44,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     // Check if user is the owner or an admin
-    if (campaign.userId !== session.user.id && !session.user.isAdmin) {
+    const userIsAdmin = await isAdmin(session.user.id)
+    if (campaign.userId !== session.user.id && !userIsAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -96,7 +84,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
 
     // Check if user is the owner or an admin
-    if (campaign.userId !== session.user.id && !session.user.isAdmin) {
+    const userIsAdmin = await isAdmin(session.user.id)
+    if (campaign.userId !== session.user.id && !userIsAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

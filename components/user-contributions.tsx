@@ -1,16 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-
-// Define the Contribution type
-type Contribution = {
-  id: string
-  campaignId: string
-  campaignTitle?: string
-  amount: number
-  timestamp: string
-  transactionHash: string
-}
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ExternalLink } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { getUserContributions } from "@/lib/contribution-service"
+import type { Contribution } from "@/lib/models/types"
 
 export function UserContributions() {
   const [contributions, setContributions] = useState<Contribution[]>([])
@@ -65,7 +56,7 @@ export function UserContributions() {
     return (
       <Card className="text-center p-6">
         <CardTitle className="mb-2">No Contributions Yet</CardTitle>
-        <p className="text-muted-foreground mb-4">You haven't contributed to any campaigns yet.</p>
+        <p className="text-muted-foreground mb-4">You haven&apos;t contributed to any campaigns yet.</p>
         <Link href="/campaigns">
           <Button>Browse Campaigns</Button>
         </Link>
@@ -75,8 +66,8 @@ export function UserContributions() {
 
   return (
     <div className="space-y-4">
-      {contributions.map((contribution: any) => (
-        <Card key={contribution.id}>
+      {contributions.map((contribution) => (
+        <Card key={contribution._id?.toString()}>
           <CardHeader>
             <div className="flex justify-between items-center">
               <Link href={`/campaigns/${contribution.campaignId}`} className="hover:underline">
@@ -106,4 +97,3 @@ export function UserContributions() {
     </div>
   )
 }
-

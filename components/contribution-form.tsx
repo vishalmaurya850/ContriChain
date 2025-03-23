@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ethers } from "ethers"
-import { Web3Provider } from "@ethersproject/providers"
+import { JsonRpcProvider } from "ethers"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,9 +10,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { contributeToChain } from "@/lib/contract-utils"
+import type { Campaign } from "@/lib/models/types"
 
 interface ContributionFormProps {
-  campaign: any
+  campaign: Campaign
 }
 
 export function ContributionForm({ campaign }: ContributionFormProps) {
@@ -32,7 +32,7 @@ export function ContributionForm({ campaign }: ContributionFormProps) {
         description: "Please sign in to contribute to this campaign",
         variant: "destructive",
       })
-      router.push(`/login?callbackUrl=/campaigns/${campaign.id}`)
+      router.push(`/login?callbackUrl=/campaigns/${campaign._id}`)
       return
     }
 
@@ -57,7 +57,8 @@ export function ContributionForm({ campaign }: ContributionFormProps) {
     setIsContributing(true)
 
     try {
-      const provider = new Web3Provider(window.ethereum)
+      // Connect to provider
+      const provider = new JsonRpcProvider(window.ethereum)
 
       // Request account access
       await window.ethereum.request({ method: "eth_requestAccounts" })
@@ -66,7 +67,7 @@ export function ContributionForm({ campaign }: ContributionFormProps) {
       const result = await contributeToChain(provider, campaign.onChainId, Number(amount))
 
       // Record contribution in database
-      const response = await fetch(`/api/campaigns/${campaign.id}/contribute`, {
+      const response = await fetch(`/api/campaigns/${campaign._id}/contribute`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -142,4 +143,3 @@ export function ContributionForm({ campaign }: ContributionFormProps) {
     </Card>
   )
 }
-

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { createCampaign, getAllCampaigns } from "@/lib/campaign-service"
+import { getUserById } from "@/lib/user-service"
 import { z } from "zod"
 
 // Schema for campaign creation
@@ -12,6 +13,8 @@ const campaignSchema = z.object({
   duration: z.number().int().positive(),
   category: z.string(),
   imageUrl: z.string().url().optional(),
+  onChainId: z.string(),
+  transactionHash: z.string(),
 })
 
 export async function GET() {
@@ -37,12 +40,19 @@ export async function POST(request: Request) {
     // Validate request body
     const validatedData = campaignSchema.parse(body)
 
+    // Get user data
+    const user = await getUserById(session.user.id)
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
     // Create campaign
     const campaign = await createCampaign({
       ...validatedData,
       userId: session.user.id,
-      onChainId: "generatedOnChainId", // Replace with actual logic to generate or fetch onChainId
-      transactionHash: "generatedTransactionHash", // Replace with actual logic to generate or fetch transactionHash
+      userName: user.name,
+      userImage: user.image,
     })
 
     return NextResponse.json(campaign, { status: 201 })
@@ -55,4 +65,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create campaign" }, { status: 500 })
   }
 }
-

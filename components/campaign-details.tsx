@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -9,11 +10,11 @@ import { Calendar, Clock, ExternalLink, Share2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { claimFundsOnChain, claimRefundOnChain } from "@/lib/contract-utils"
-// import { ethers } from "ethers"
-import { Web3Provider } from "@ethersproject/providers"
+import { JsonRpcProvider } from "ethers"
+import type { Campaign } from "@/lib/models/types"
 
 interface CampaignDetailsProps {
-  campaign: any
+  campaign: Campaign
 }
 
 export function CampaignDetails({ campaign }: CampaignDetailsProps) {
@@ -21,8 +22,8 @@ export function CampaignDetails({ campaign }: CampaignDetailsProps) {
   const { toast } = useToast()
   const { data: session } = useSession()
 
-  const raisedAmount = Number.parseFloat(campaign.raised)
-  const goalAmount = Number.parseFloat(campaign.goal)
+  const raisedAmount = campaign.raised
+  const goalAmount = campaign.goal
   const progress = Math.min(Math.round((raisedAmount / goalAmount) * 100), 100)
 
   const isOwner = session?.user?.id === campaign.userId
@@ -44,13 +45,13 @@ export function CampaignDetails({ campaign }: CampaignDetailsProps) {
     setIsProcessing(true)
 
     try {
-      const provider = new Web3Provider(window.ethereum)
+      const provider = new JsonRpcProvider(window.ethereum)
       await window.ethereum.request({ method: "eth_requestAccounts" })
 
-      const result = await claimFundsOnChain(provider, campaign.onChainId)
+      await claimFundsOnChain(provider, campaign.onChainId)
 
       // Update campaign status in database
-      await fetch(`/api/campaigns/${campaign.id}`, {
+      await fetch(`/api/campaigns/${campaign._id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -93,10 +94,10 @@ export function CampaignDetails({ campaign }: CampaignDetailsProps) {
     setIsProcessing(true)
 
     try {
-      const provider = new Web3Provider(window.ethereum)
+      const provider = new JsonRpcProvider(window.ethereum)
       await window.ethereum.request({ method: "eth_requestAccounts" })
 
-      const result = await claimRefundOnChain(provider, campaign.onChainId)
+      await claimRefundOnChain(provider, campaign.onChainId)
 
       toast({
         title: "Refund claimed",
@@ -137,11 +138,12 @@ export function CampaignDetails({ campaign }: CampaignDetailsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-lg">
-        <img
+      <div className="relative overflow-hidden rounded-lg h-[300px] md:h-[400px]">
+        <Image
           src={campaign.imageUrl || "/placeholder.svg?height=400&width=800"}
           alt={campaign.title}
-          className="w-full h-[300px] md:h-[400px] object-cover"
+          fill
+          className="object-cover"
         />
         {campaign.status !== "active" && (
           <div className="absolute top-4 right-4">
@@ -230,4 +232,3 @@ export function CampaignDetails({ campaign }: CampaignDetailsProps) {
     </div>
   )
 }
-

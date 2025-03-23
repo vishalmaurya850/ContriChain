@@ -1,18 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-
-// Define the Campaign type
-type Campaign = {
-  id: string
-  title: string
-  description: string
-  raised: number
-  goal: string
-  createdAt: string
-  deadline: number
-  status: string
-}
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { getUserCampaigns } from "@/lib/campaign-service"
+import type { Campaign } from "@/lib/models/types"
 
 export function UserCampaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -34,7 +23,7 @@ export function UserCampaigns() {
 
       try {
         const userCampaigns = await getUserCampaigns(session.user.id)
-        setCampaigns(userCampaigns.map(campaign => ({ ...campaign, goal: campaign.goal.toString() })))
+        setCampaigns(userCampaigns)
       } catch (error) {
         console.error("Error fetching user campaigns:", error)
       } finally {
@@ -74,7 +63,7 @@ export function UserCampaigns() {
     return (
       <Card className="text-center p-6">
         <CardTitle className="mb-2">No Campaigns Yet</CardTitle>
-        <CardDescription className="mb-4">You haven't created any campaigns yet.</CardDescription>
+        <CardDescription className="mb-4">You haven&apos;t created any campaigns yet.</CardDescription>
         <Link href="/create">
           <Button>Create Your First Campaign</Button>
         </Link>
@@ -84,13 +73,13 @@ export function UserCampaigns() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {campaigns.map((campaign: any) => {
-        const raisedAmount = Number.parseFloat(campaign.raised)
-        const goalAmount = Number.parseFloat(campaign.goal)
+      {campaigns.map((campaign) => {
+        const raisedAmount = campaign.raised
+        const goalAmount = campaign.goal
         const progress = Math.min(Math.round((raisedAmount / goalAmount) * 100), 100)
 
         return (
-          <Card key={campaign.id}>
+          <Card key={campaign._id?.toString()}>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -114,11 +103,11 @@ export function UserCampaigns() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Link href={`/campaigns/${campaign.id}`}>
+              <Link href={`/campaigns/${campaign._id}`}>
                 <Button variant="outline">View Campaign</Button>
               </Link>
               <div className="flex gap-2">
-                <Link href={`/campaigns/${campaign.id}/edit`}>
+                <Link href={`/campaigns/${campaign._id}/edit`}>
                   <Button variant="ghost" size="icon">
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -134,4 +123,3 @@ export function UserCampaigns() {
     </div>
   )
 }
-

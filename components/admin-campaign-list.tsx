@@ -12,17 +12,7 @@ import { Eye, MoreHorizontal, Trash2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { getAllCampaigns, deleteCampaign } from "@/lib/campaign-service"
-
-// Define the Campaign type
-interface Campaign {
-  id: string;
-  title: string;
-  userName: string;
-  goal: number;
-  raised: number;
-  status: string;
-  createdAt: string;
-}
+import type { Campaign } from "@/lib/models/types"
 
 export function AdminCampaignList() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -54,7 +44,7 @@ export function AdminCampaignList() {
       await deleteCampaign(id)
 
       // Remove campaign from state
-      setCampaigns(campaigns.filter((campaign: any) => campaign.id !== id))
+      setCampaigns(campaigns.filter((campaign) => campaign._id?.toString() !== id))
 
       toast({
         title: "Campaign deleted",
@@ -70,7 +60,7 @@ export function AdminCampaignList() {
     }
   }
 
-  const filteredCampaigns = campaigns.filter((campaign: any) => {
+  const filteredCampaigns = campaigns.filter((campaign) => {
     return (
       campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.userName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -139,8 +129,8 @@ export function AdminCampaignList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredCampaigns.map((campaign: any) => (
-                  <TableRow key={campaign.id}>
+                filteredCampaigns.map((campaign) => (
+                  <TableRow key={campaign._id?.toString()}>
                     <TableCell className="font-medium">{campaign.title}</TableCell>
                     <TableCell>{campaign.userName}</TableCell>
                     <TableCell>{campaign.goal}</TableCell>
@@ -157,12 +147,12 @@ export function AdminCampaignList() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/campaigns/${campaign.id}`}>
+                            <Link href={`/campaigns/${campaign._id}`}>
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeleteCampaign(campaign.id)}>
+                          <DropdownMenuItem onClick={() => handleDeleteCampaign(campaign._id?.toString() || "")}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
@@ -179,4 +169,3 @@ export function AdminCampaignList() {
     </Card>
   )
 }
-

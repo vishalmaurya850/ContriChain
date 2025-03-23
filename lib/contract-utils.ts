@@ -1,91 +1,100 @@
-import { ethers } from "ethers"
-import { parseEther } from "ethers"
+import { ethers, Contract, JsonRpcProvider } from "ethers"
 import CrowdfundingABI from "@/contracts/CrowdfundingABI.json"
 
 const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ""
 
-// Sample data for development
-const sampleCampaigns = [
-  {
-    id: "1",
-    title: "Sustainable Energy Project",
-    description: "Funding renewable energy solutions for rural communities.",
-    goal: "5.0",
-    raised: "3.2",
-    deadline: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days from now
-    owner: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    imageUrl: "/placeholder.svg?height=400&width=600",
-  },
-  {
-    id: "2",
-    title: "Educational Platform",
-    description: "Building a decentralized learning platform for blockchain development.",
-    goal: "2.5",
-    raised: "1.8",
-    deadline: Math.floor(Date.now() / 1000) + 15 * 24 * 60 * 60, // 15 days from now
-    owner: "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2",
-    imageUrl: "/placeholder.svg?height=400&width=600",
-  },
-  {
-    id: "3",
-    title: "Community Art Initiative",
-    description: "Supporting local artists through NFT creation and exhibition.",
-    goal: "1.0",
-    raised: "0.7",
-    deadline: Math.floor(Date.now() / 1000) + 20 * 24 * 60 * 60, // 20 days from now
-    owner: "0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db",
-    imageUrl: "/placeholder.svg?height=400&width=600",
-  },
-  {
-    id: "4",
-    title: "Healthcare Innovation",
-    description: "Developing blockchain solutions for medical record management.",
-    goal: "8.0",
-    raised: "2.5",
-    deadline: Math.floor(Date.now() / 1000) + 45 * 24 * 60 * 60, // 45 days from now
-    owner: "0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB",
-    imageUrl: "/placeholder.svg?height=400&width=600",
-  },
-  {
-    id: "5",
-    title: "Open Source Development",
-    description: "Supporting critical open source infrastructure for Web3.",
-    goal: "3.0",
-    raised: "2.9",
-    deadline: Math.floor(Date.now() / 1000) + 10 * 24 * 60 * 60, // 10 days from now
-    owner: "0x617F2E2fD72FD9D5503197092aC168c91465E7f2",
-    imageUrl: "/placeholder.svg?height=400&width=600",
-  },
-  {
-    id: "6",
-    title: "Decentralized Finance Tool",
-    description: "Creating accessible DeFi tools for underserved communities.",
-    goal: "4.0",
-    raised: "1.2",
-    deadline: Math.floor(Date.now() / 1000) + 25 * 24 * 60 * 60, // 25 days from now
-    owner: "0x17F6AD8Ef982297579C203069C1DbfFE4348c372",
-    imageUrl: "/placeholder.svg?height=400&width=600",
-  },
-]
-
-export function getCrowdfundingContract(providerOrSigner: any) {
-  return new ethers.Contract(contractAddress, CrowdfundingABI, providerOrSigner)
+export function getCrowdfundingContract(providerOrSigner: ethers.Provider | ethers.Signer) {
+  return new Contract(contractAddress, CrowdfundingABI, providerOrSigner)
 }
 
 export async function getCampaigns() {
-  // In a real implementation, this would fetch from the blockchain
-  // For now, return sample data
-  return sampleCampaigns
+  try {
+    // Connect to a provider
+    const provider = new JsonRpcProvider(process.env.ETHEREUM_RPC_URL)
+    const contract = getCrowdfundingContract(provider)
+
+    // Get campaign count
+    const campaignCount = await contract.campaignCount()
+
+    // Fetch all campaigns
+    const campaigns = []
+
+    for (let i = 0; i < Number(campaignCount); i++) {
+      const campaignDetails = await contract.getCampaignDetails(i)
+
+      campaigns.push({
+        id: i.toString(),
+        title: campaignDetails.title,
+        description: campaignDetails.description,
+        goal: ethers.formatEther(campaignDetails.goal),
+        raised: ethers.formatEther(campaignDetails.amountRaised),
+        deadline: Number(campaignDetails.deadline),
+        owner: campaignDetails.owner,
+        imageUrl: campaignDetails.imageUrl,
+        claimed: campaignDetails.claimed,
+      })
+    }
+
+    return campaigns
+  } catch (error) {
+    console.error("Error fetching campaigns from blockchain:", error)
+    throw error
+  }
 }
 
 export async function getFeaturedCampaign() {
-  // In a real implementation, this would fetch from the blockchain or a backend
-  // For now, return the first sample campaign as featured
-  return sampleCampaigns[0]
+  try {
+    const provider = new JsonRpcProvider(process.env.ETHEREUM_RPC_URL)
+    const contract = getCrowdfundingContract(provider)
+
+    // Get campaign count
+    const campaignCount = await contract.campaignCount()
+
+    if (Number(campaignCount) === 0) {
+      return null
+    }
+
+    // Find the campaign with the highest percentage funded
+    let featuredCampaignId = 0
+    let highestPercentage = 0
+
+    for (let i = 0; i < Number(campaignCount); i++) {
+      const campaignDetails = await contract.getCampaignDetails(i)
+
+      if (Number(campaignDetails.deadline) > Math.floor(Date.now() / 1000)) {
+        const goal = ethers.formatEther(campaignDetails.goal)
+        const raised = ethers.formatEther(campaignDetails.amountRaised)
+        const percentage = Number.parseFloat(raised) / Number.parseFloat(goal)
+
+        if (percentage > highestPercentage) {
+          highestPercentage = percentage
+          featuredCampaignId = i
+        }
+      }
+    }
+
+    // Get the featured campaign details
+    const featuredCampaignDetails = await contract.getCampaignDetails(featuredCampaignId)
+
+    return {
+      id: featuredCampaignId.toString(),
+      title: featuredCampaignDetails.title,
+      description: featuredCampaignDetails.description,
+      goal: ethers.formatEther(featuredCampaignDetails.goal),
+      raised: ethers.formatEther(featuredCampaignDetails.amountRaised),
+      deadline: Number(featuredCampaignDetails.deadline),
+      owner: featuredCampaignDetails.owner,
+      imageUrl: featuredCampaignDetails.imageUrl,
+      claimed: featuredCampaignDetails.claimed,
+    }
+  } catch (error) {
+    console.error("Error fetching featured campaign from blockchain:", error)
+    throw error
+  }
 }
 
 export async function createCampaignOnChain(
-  provider: any,
+  provider: JsonRpcProvider,
   title: string,
   description: string,
   goal: number,
@@ -93,13 +102,13 @@ export async function createCampaignOnChain(
   imageUrl: string,
 ) {
   try {
-    const signer = provider.getSigner()
+    const signer = await provider.getSigner()
     const contract = getCrowdfundingContract(signer)
 
     const tx = await contract.createCampaign(
       title,
       description,
-      parseEther(goal.toString()),
+      ethers.parseEther(goal.toString()),
       durationInDays,
       imageUrl,
     )
@@ -107,15 +116,24 @@ export async function createCampaignOnChain(
     const receipt = await tx.wait()
 
     // Get campaign ID from event
-    const event = receipt.events?.find((event: any) => event.event === "CampaignCreated")
+    const event = receipt?.logs.find((log: ethers.Log): boolean => {
+      try {
+        const parsedLog = contract.interface.parseLog(log)
+        return parsedLog?.name === "CampaignCreated"
+      } catch {
+        return false
+      }
+    })
 
     if (!event) {
       throw new Error("Campaign creation event not found")
     }
 
+    const parsedEvent = contract.interface.parseLog(event)
+
     return {
-      campaignId: event.args.campaignId.toString(),
-      transactionHash: receipt.transactionHash,
+      campaignId: parsedEvent?.args.campaignId.toString(),
+      transactionHash: receipt?.hash,
     }
   } catch (error) {
     console.error("Error creating campaign on chain:", error)
@@ -123,19 +141,19 @@ export async function createCampaignOnChain(
   }
 }
 
-export async function contributeToChain(provider: any, campaignId: string, amount: number) {
+export async function contributeToChain(provider: JsonRpcProvider, campaignId: string, amount: number) {
   try {
-    const signer = provider.getSigner()
+    const signer = await provider.getSigner()
     const contract = getCrowdfundingContract(signer)
 
     const tx = await contract.contribute(campaignId, {
-      value: parseEther(amount.toString()),
+      value: ethers.parseEther(amount.toString()),
     })
 
     const receipt = await tx.wait()
 
     return {
-      transactionHash: receipt.transactionHash,
+      transactionHash: receipt?.hash,
     }
   } catch (error) {
     console.error("Error contributing to campaign:", error)
@@ -143,9 +161,9 @@ export async function contributeToChain(provider: any, campaignId: string, amoun
   }
 }
 
-export async function claimFundsOnChain(provider: any, campaignId: string) {
+export async function claimFundsOnChain(provider: JsonRpcProvider, campaignId: string) {
   try {
-    const signer = provider.getSigner()
+    const signer = await provider.getSigner()
     const contract = getCrowdfundingContract(signer)
 
     const tx = await contract.claimFunds(campaignId)
@@ -153,7 +171,7 @@ export async function claimFundsOnChain(provider: any, campaignId: string) {
     const receipt = await tx.wait()
 
     return {
-      transactionHash: receipt.transactionHash,
+      transactionHash: receipt?.hash,
     }
   } catch (error) {
     console.error("Error claiming funds:", error)
@@ -161,9 +179,9 @@ export async function claimFundsOnChain(provider: any, campaignId: string) {
   }
 }
 
-export async function claimRefundOnChain(provider: any, campaignId: string) {
+export async function claimRefundOnChain(provider: JsonRpcProvider, campaignId: string) {
   try {
-    const signer = provider.getSigner()
+    const signer = await provider.getSigner()
     const contract = getCrowdfundingContract(signer)
 
     const tx = await contract.claimRefund(campaignId)
@@ -171,11 +189,10 @@ export async function claimRefundOnChain(provider: any, campaignId: string) {
     const receipt = await tx.wait()
 
     return {
-      transactionHash: receipt.transactionHash,
+      transactionHash: receipt?.hash,
     }
   } catch (error) {
     console.error("Error claiming refund:", error)
     throw error
   }
 }
-

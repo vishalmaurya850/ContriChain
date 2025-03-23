@@ -1,10 +1,6 @@
-import type { NextAuthOptions, User } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import { signInWithEmailAndPassword } from "firebase/auth"
-import { auth, db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
+import type { NextAuthOptions, DefaultSession } from "next-auth"
 
-// Extend the User type to include isAdmin and walletAddress
+// Extend the User type to include isAdmin
 declare module "next-auth" {
   interface User {
     isAdmin?: boolean
@@ -13,23 +9,16 @@ declare module "next-auth" {
 
   interface Session {
     user: {
-      id: string
-      isAdmin: boolean
-      walletAddress: string | null
-      name?: string | null
-      email?: string | null
-      image?: string | null
-    }
+      id?: string
+      isAdmin?: boolean
+      walletAddress?: string | null
+    } & DefaultSession["user"]
   }
 }
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id?: string
-    isAdmin?: boolean
-    walletAddress?: string | null
-  }
-}
+import CredentialsProvider from "next-auth/providers/credentials"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth, db } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -86,7 +75,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.isAdmin = user.isAdmin
-        token.walletAddress = user.walletAddress
+        token.isAdmin = user.isAdmin || false
       }
       return token
     },
@@ -100,4 +89,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 }
-

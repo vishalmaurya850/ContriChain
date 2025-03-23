@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { SessionProvider } from "next-auth/react"
-import { onAuthStateChanged } from "firebase/auth"
+import { onAuthStateChanged, type User } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 
 interface AuthContextType {
-  firebaseUser: any | null
+  firebaseUser: User | null
   loading: boolean
 }
 
@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<any | null>(null)
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -38,4 +38,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext)
 }
-

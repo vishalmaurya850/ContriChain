@@ -5,7 +5,7 @@ import flagsmith from "flagsmith"
 
 interface FlagsmithContextType {
   isFeatureEnabled: (flagName: string) => boolean
-  getValue: (flagName: string) => any
+  getValue: (flagName: string) => string | number | boolean | null
   loading: boolean
 }
 
@@ -38,7 +38,7 @@ export function FlagsmithProvider({ children }: { children: ReactNode }) {
     return flagsmith.hasFeature(flagName)
   }
 
-  const getValue = (flagName: string) => {
+  const getValue = (flagName: string): string | number | boolean | null => {
     if (!initialized) return null
     return flagsmith.getValue(flagName)
   }
@@ -55,4 +55,3 @@ export function useFlagsmith() {
   }
   return context
 }
-

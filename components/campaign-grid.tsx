@@ -2,23 +2,13 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { useSearchParams } from "next/navigation"
 import { getAllCampaigns } from "@/lib/campaign-service"
-
-// Define the Campaign type
-interface Campaign {
-  id: string
-  title: string
-  description: string
-  imageUrl?: string
-  owner: string
-  raised: number
-  goal: number
-  deadline: number
-}
+import type { Campaign } from "@/lib/models/types"
 
 export function CampaignGrid() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -44,11 +34,11 @@ export function CampaignGrid() {
         let filteredCampaigns = [...allCampaigns]
 
         if (minFunding) {
-          filteredCampaigns = filteredCampaigns.filter((c: any) => c.raised >= Number(minFunding))
+          filteredCampaigns = filteredCampaigns.filter((c) => c.raised >= Number(minFunding))
         }
 
         if (nearlyFunded) {
-          filteredCampaigns = filteredCampaigns.filter((c: any) => {
+          filteredCampaigns = filteredCampaigns.filter((c) => {
             const progress = (c.raised / c.goal) * 100
             return progress >= 80
           })
@@ -57,15 +47,10 @@ export function CampaignGrid() {
         if (endingSoon) {
           const nowInSeconds = Math.floor(Date.now() / 1000)
           const sevenDaysInSeconds = 7 * 24 * 60 * 60
-          filteredCampaigns = filteredCampaigns.filter((c: any) => c.deadline - nowInSeconds <= sevenDaysInSeconds)
+          filteredCampaigns = filteredCampaigns.filter((c) => c.deadline - nowInSeconds <= sevenDaysInSeconds)
         }
 
-        setCampaigns(
-          filteredCampaigns.map((campaign: any) => ({
-            ...campaign,
-            owner: campaign.owner || "Unknown", // Provide a default value if owner is missing
-          }))
-        )
+        setCampaigns(filteredCampaigns)
       } catch (error) {
         console.error("Error fetching campaigns:", error)
       } finally {
@@ -94,25 +79,24 @@ export function CampaignGrid() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {campaigns.map((campaign: any) => {
-        const raisedAmount = Number.parseFloat(campaign.raised)
-        const goalAmount = Number.parseFloat(campaign.goal)
+      {campaigns.map((campaign) => {
+        const raisedAmount = campaign.raised
+        const goalAmount = campaign.goal
         const progress = Math.min(Math.round((raisedAmount / goalAmount) * 100), 100)
 
         return (
-          <Card key={campaign.id} className="overflow-hidden flex flex-col">
-            <div className="h-48 overflow-hidden">
-              <img
+          <Card key={campaign._id?.toString()} className="overflow-hidden flex flex-col">
+            <div className="h-48 overflow-hidden relative">
+              <Image
                 src={campaign.imageUrl || "/placeholder.svg?height=200&width=400"}
                 alt={campaign.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             </div>
             <CardHeader>
               <CardTitle>{campaign.title}</CardTitle>
-              <CardDescription>
-                by {`${campaign.owner?.substring(0, 6)}...${campaign.owner?.substring(campaign.owner.length - 4)}`}
-              </CardDescription>
+              <CardDescription>by {campaign.userName}</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">
               <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{campaign.description}</p>
@@ -128,7 +112,7 @@ export function CampaignGrid() {
               </div>
             </CardContent>
             <CardFooter>
-              <Link href={`/campaigns/${campaign.id}`} className="w-full">
+              <Link href={`/campaigns/${campaign._id}`} className="w-full">
                 <Button className="w-full">View Campaign</Button>
               </Link>
             </CardFooter>

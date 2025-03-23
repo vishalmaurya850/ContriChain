@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
@@ -81,11 +82,12 @@ export function FeaturedCampaign() {
   return (
     <Card className="w-full max-w-4xl mx-auto overflow-hidden">
       <div className="md:flex">
-        <div className="md:w-1/2">
-          <img
+        <div className="md:w-1/2 relative h-64 md:h-full">
+          <Image
             src={campaign.imageUrl || "/placeholder.svg?height=400&width=600"}
             alt={campaign.title}
-            className="w-full h-64 md:h-full object-cover"
+            fill
+            className="object-cover"
           />
         </div>
         <div className="p-6 md:w-1/2">
@@ -130,4 +132,3 @@ export function FeaturedCampaign() {
     </Card>
   )
 }
-

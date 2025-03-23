@@ -1,30 +1,76 @@
-import { db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
+import clientPromise from "./mongodb"
+import { ObjectId } from "mongodb"
 
 export async function isAdmin(userId: string): Promise<boolean> {
   try {
-    const userDoc = await getDoc(doc(db, "users", userId))
+    const client = await clientPromise
+    const db = client.db()
 
-    if (!userDoc.exists()) {
+    const user = await db.collection("users").findOne({ _id: new ObjectId(userId) })
+
+    if (!user) {
       return false
     }
 
-    return userDoc.data().isAdmin === true
+    return user.isAdmin === true
   } catch (error) {
     console.error("Error checking admin status:", error)
     return false
   }
 }
 
-export async function getAdminStats() {
-  // In a real implementation, this would fetch actual stats from the database
-  // For now, return sample data
-  return {
-    totalCampaigns: 42,
-    activeCampaigns: 28,
-    totalUsers: 156,
-    totalFundsRaised: 24.5, // ETH
-    transactionsToday: 12,
+export async function getAdminStats(): Promise<{
+  totalCampaigns: number
+  activeCampaigns: number
+  totalUsers: number
+  totalFundsRaised: number
+  transactionsToday: number
+}> {
+  try {
+    const client = await clientPromise
+    const db = client.db()
+
+    // Get total campaigns
+    const totalCampaigns = await db.collection("campaigns").countDocuments()
+
+    // Get active campaigns
+    const activeCampaigns = await db.collection("campaigns").countDocuments({ status: "active" })
+
+    // Get total users
+    const totalUsers = await db.collection("users").countDocuments()
+
+    // Get total funds raised
+    const campaignsAggregate = await db
+      .collection("campaigns")
+      .aggregate<{ _id: null; totalRaised: number }>([
+        {
+          $group: {
+            _id: null,
+            totalRaised: { $sum: "$raised" },
+          },
+        },
+      ])
+      .toArray()
+
+    const totalFundsRaised = campaignsAggregate.length > 0 ? campaignsAggregate[0].totalRaised : 0
+
+    // Get transactions today
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const transactionsToday = await db.collection("transactions").countDocuments({
+      timestamp: { $gte: today },
+    })
+
+    return {
+      totalCampaigns,
+      activeCampaigns,
+      totalUsers,
+      totalFundsRaised,
+      transactionsToday,
+    }
+  } catch (error) {
+    console.error("Error getting admin stats:", error)
+    throw error
   }
 }
-

@@ -71,10 +71,11 @@ export function RegisterForm() {
       })
 
       router.push("/login")
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
       console.error("Registration error:", error)
 
-      if (error.code === "auth/email-already-in-use") {
+      if (error instanceof Error && "code" in error && error.code === "auth/email-already-in-use") {
         toast({
           title: "Email already in use",
           description: "Please use a different email address or login",
@@ -148,4 +149,3 @@ export function RegisterForm() {
     </form>
   )
 }
-

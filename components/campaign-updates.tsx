@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
+import type { CampaignUpdate } from "@/lib/models/types"
 
 interface CampaignUpdatesProps {
   campaignId: string
 }
 
 export function CampaignUpdates({ campaignId }: CampaignUpdatesProps) {
-  const [updates, setUpdates] = useState<{ id: string; title?: string; timestamp: string; content: string }[]>([])
+  const [updates, setUpdates] = useState<CampaignUpdate[]>([])
   const [loading, setLoading] = useState(true)
   const [newUpdate, setNewUpdate] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -147,8 +148,8 @@ export function CampaignUpdates({ campaignId }: CampaignUpdatesProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {updates.map((update: any) => (
-            <Card key={update.id}>
+          {updates.map((update) => (
+            <Card key={update._id?.toString()}>
               <CardHeader>
                 <CardTitle className="text-lg">{update.title || "Campaign Update"}</CardTitle>
                 <CardDescription>
@@ -165,4 +166,3 @@ export function CampaignUpdates({ campaignId }: CampaignUpdatesProps) {
     </div>
   )
 }
-

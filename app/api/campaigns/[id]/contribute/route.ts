@@ -3,9 +3,11 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { getCampaignById } from "@/lib/campaign-service"
 import { createContribution } from "@/lib/contribution-service"
+import { getUserById } from "@/lib/user-service"
 import { z } from "zod"
-import { JsonRpcProvider, formatEther } from "ethers"
+import { ethers, JsonRpcProvider } from "ethers"
 import { getCrowdfundingContract } from "@/lib/contract-utils"
+import { contractAddress } from "@/lib/contract-address"
 
 // Schema for contribution
 const contributionSchema = z.object({
@@ -33,16 +35,30 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const validatedData = contributionSchema.parse(body)
 
     // Verify transaction on blockchain
-    const isValidTransaction = await verifyTransaction(validatedData.transactionHash, params.id, validatedData.amount)
+    const isValidTransaction = await verifyTransaction(
+      validatedData.transactionHash,
+      campaign.onChainId,
+      validatedData.amount,
+    )
 
     if (!isValidTransaction) {
       return NextResponse.json({ error: "Invalid transaction" }, { status: 400 })
     }
 
+    // Get user data
+    const user = await getUserById(session.user.id)
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
     // Create contribution record
     const contribution = await createContribution({
       campaignId: params.id,
-      userId: session.user?.email ?? "unknown", // Use email as a fallback identifier
+      campaignTitle: campaign.title,
+      userId: session.user.id,
+      userName: user.name,
+      userImage: user.image,
       amount: validatedData.amount,
       transactionHash: validatedData.transactionHash,
     })
@@ -58,7 +74,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 }
 
-async function verifyTransaction(transactionHash: string, campaignId: string, amount: number) {
+async function verifyTransaction(transactionHash: string, campaignId: string, amount: number): Promise<boolean> {
   try {
     // Get provider
     const provider = new JsonRpcProvider(process.env.ETHEREUM_RPC_URL)
@@ -73,7 +89,7 @@ async function verifyTransaction(transactionHash: string, campaignId: string, am
     // Wait for transaction to be mined
     const receipt = await transaction.wait()
 
-    if (!receipt || !receipt.status) {
+    if (!receipt || receipt.status !== 1) {
       return false
     }
 
@@ -82,22 +98,22 @@ async function verifyTransaction(transactionHash: string, campaignId: string, am
 
     // Parse logs to verify contribution
     const contributionEvent = receipt.logs
-      .filter((log) => log.address === String(contract.address))
+      .filter((log) => log.address?.toLowerCase() === contractAddress?.toLowerCase())
       .map((log) => {
         try {
           return contract.interface.parseLog(log)
-        } catch (e) {
+        } catch {
           return null
         }
       })
-      .find((event) => event && event.name === "ContributionMade" && event.args.campaignId.toString() === campaignId)
+      .find((event) => event?.name === "ContributionMade" && event.args.campaignId.toString() === campaignId)
 
     if (!contributionEvent) {
       return false
     }
 
     // Verify amount
-    const contributionAmount = formatEther(contributionEvent.args.amount)
+    const contributionAmount = ethers.formatEther(contributionEvent.args.amount)
 
     return Number.parseFloat(contributionAmount) === amount
   } catch (error) {

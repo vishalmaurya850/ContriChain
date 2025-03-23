@@ -6,21 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ExternalLink } from "lucide-react"
 import { getCampaignContributions } from "@/lib/contribution-service"
+import type { Contribution } from "@/lib/models/types"
 
 interface CampaignContributorsProps {
   campaignId: string
 }
 
 export function CampaignContributors({ campaignId }: CampaignContributorsProps) {
-  interface Contribution {
-    id: string
-    userName: string
-    userImage: string
-    timestamp: string
-    amount: string
-    transactionHash: string
-  }
-
   const [contributors, setContributors] = useState<Contribution[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -28,12 +20,7 @@ export function CampaignContributors({ campaignId }: CampaignContributorsProps) 
     const fetchContributors = async () => {
       try {
         const contributions = await getCampaignContributions(campaignId)
-        const normalizedContributions = contributions.map(contribution => ({
-          ...contribution,
-          userImage: contribution.userImage || "", // Provide a default value for userImage
-          amount: contribution.amount.toString(), // Convert amount to string
-        }))
-        setContributors(normalizedContributions)
+        setContributors(contributions)
       } catch (error) {
         console.error("Error fetching contributors:", error)
       } finally {
@@ -72,8 +59,8 @@ export function CampaignContributors({ campaignId }: CampaignContributorsProps) 
 
   return (
     <div className="space-y-4">
-      {contributors.map((contributor: any) => (
-        <Card key={contributor.id}>
+      {contributors.map((contributor) => (
+        <Card key={contributor._id?.toString()}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -107,4 +94,3 @@ export function CampaignContributors({ campaignId }: CampaignContributorsProps) 
     </div>
   )
 }
-

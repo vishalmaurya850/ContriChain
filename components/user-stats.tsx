@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useSession } from "next-auth/react"
 import { getUserCampaigns } from "@/lib/campaign-service"
 import { getUserContributions } from "@/lib/contribution-service"
+import type { Campaign, Contribution } from "@/lib/models/types"
 
 export function UserStats() {
   const [stats, setStats] = useState({
@@ -23,15 +24,15 @@ export function UserStats() {
 
       try {
         // Fetch user campaigns
-        const campaigns = await getUserCampaigns(session.user.id)
-        const activeCampaigns = campaigns.filter((c: any) => c.status === "active").length
+        const campaigns: Campaign[] = await getUserCampaigns(session.user.id)
+        const activeCampaigns = campaigns.filter((c) => c.status === "active").length
 
         // Fetch user contributions
-        const contributions = await getUserContributions(session.user.id)
-        const totalContributed = contributions.reduce((sum: number, c: any) => sum + c.amount, 0)
+        const contributions: Contribution[] = await getUserContributions(session.user.id)
+        const totalContributed = contributions.reduce((sum, c) => sum + c.amount, 0)
 
         // Get unique campaigns contributed to
-        const uniqueCampaignIds = new Set(contributions.map((c: any) => c.campaignId))
+        const uniqueCampaignIds = new Set(contributions.map((c) => c.campaignId))
 
         setStats({
           totalCampaigns: campaigns.length,
@@ -105,4 +106,3 @@ export function UserStats() {
     </div>
   )
 }
-

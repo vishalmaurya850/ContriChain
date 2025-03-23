@@ -1,180 +1,108 @@
-import { db } from "@/lib/firebase"
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  runTransaction,
-  DocumentData,
-  DocumentSnapshot,
-} from "firebase/firestore"
+import clientPromise from "./mongodb"
+import { ObjectId } from "mongodb"
+import type { Contribution } from "./models/types"
 
-export interface Contribution {
-  id: string
+export async function createContribution(data: {
   campaignId: string
+  campaignTitle: string
   userId: string
   userName: string
   userImage?: string
   amount: number
   transactionHash: string
-  timestamp: any
-}
-
-export async function createContribution(data: {
-  campaignId: string
-  userId: string
-  amount: number
-  transactionHash: string
-}) {
+}): Promise<Contribution> {
   try {
-    const userRef = doc(db, "users", data.userId)
-    const campaignRef = doc(db, "campaigns", data.campaignId)
+    const client = await clientPromise
+    const db = client.db()
 
-    // Use transaction to update campaign raised amount
-    await runTransaction(db, async (transaction) => {
-      const campaignDoc = await transaction.get(campaignRef)
+    // Start a session for transaction
+    const session = client.startSession()
 
-      if (!campaignDoc.exists()) {
-        throw new Error("Campaign does not exist")
-      }
+    let result: { insertedId: ObjectId } = { insertedId: new ObjectId() }
 
-      const currentRaised = campaignDoc.data().raised || 0
-      const newRaised = currentRaised + data.amount
+    try {
+      await session.withTransaction(async () => {
+        // Update campaign raised amount
+        await db
+          .collection("campaigns")
+          .updateOne({ _id: new ObjectId(data.campaignId) }, { $inc: { raised: data.amount } }, { session })
 
-      transaction.update(campaignRef, { raised: newRaised })
+        // Create contribution
+        const contribution: Contribution = {
+          campaignId: data.campaignId,
+          campaignTitle: data.campaignTitle,
+          userId: data.userId,
+          userName: data.userName,
+          userImage: data.userImage,
+          amount: data.amount,
+          transactionHash: data.transactionHash,
+          timestamp: new Date(),
+        }
 
-      // Add contribution
-      const contributionRef = doc(collection(db, "contributions"))
-      transaction.set(contributionRef, {
-        campaignRef,
-        userRef,
-        amount: data.amount,
-        transactionHash: data.transactionHash,
-        timestamp: serverTimestamp(),
+        result = await db.collection("contributions").insertOne(contribution, { session })
+        contribution._id = result.insertedId
+
+        // Create transaction record
+        await db.collection("transactions").insertOne(
+          {
+            type: "contribution",
+            campaignId: data.campaignId,
+            campaignTitle: data.campaignTitle,
+            userId: data.userId,
+            userName: data.userName,
+            amount: data.amount,
+            transactionHash: data.transactionHash,
+            timestamp: new Date(),
+            status: "confirmed",
+          },
+          { session },
+        )
       })
-    })
-
-    // Get user data for return value
-    interface User {
-      name: string
-      image?: string
+    } finally {
+      await session.endSession()
     }
-    const userConverter = {
-      toFirestore(user: User): DocumentData {
-        return { name: user.name, image: user.image };
-      },
-      fromFirestore(snapshot: DocumentSnapshot): User {
-        const data = snapshot.data();
-        return { name: data?.name ?? "Unknown", image: data?.image };
-      },
-    };
 
-    const userDoc = await getDoc(userRef.withConverter(userConverter));
-
-    const contribution: Contribution = {
-      id: "new-contribution-id", // This would be the actual ID in a real implementation
+    return {
+      _id: result?.insertedId,
       campaignId: data.campaignId,
+      campaignTitle: data.campaignTitle,
       userId: data.userId,
-      userName: userDoc.data()?.name ?? "Unknown",
-      userImage: (userDoc.data() as { image?: string }).image,
+      userName: data.userName,
+      userImage: data.userImage,
       amount: data.amount,
       transactionHash: data.transactionHash,
       timestamp: new Date(),
-    };
+    }
   } catch (error) {
     console.error("Error creating contribution:", error)
     throw error
   }
 }
 
-export async function getCampaignContributions(campaignId: string) {
+export async function getCampaignContributions(campaignId: string): Promise<Contribution[]> {
   try {
-    const campaignRef = doc(db, "campaigns", campaignId)
+    const client = await clientPromise
+    const db = client.db()
 
-    const contributionsQuery = query(
-      collection(db, "contributions"),
-      where("campaignRef", "==", campaignRef),
-      orderBy("timestamp", "desc"),
-    )
+    const contributions = await db.collection("contributions").find({ campaignId }).sort({ timestamp: -1 }).toArray()
 
-    const snapshot = await getDocs(contributionsQuery)
-
-    const contributions: Contribution[] = []
-
-    for (const doc of snapshot.docs) {
-      const data = doc.data()
-
-      // Get user data
-      const userConverter = {
-        toFirestore(user: { name: string; image?: string }): DocumentData {
-          return { name: user.name, image: user.image };
-        },
-        fromFirestore(snapshot: DocumentSnapshot<DocumentData>): { name: string; image?: string } {
-          const data = snapshot.data() as { name?: string; image?: string };
-          return { name: data?.name ?? "Unknown", image: data?.image };
-        },
-      };
-
-      const userDoc = await getDoc(data.userRef.withConverter(userConverter)) as DocumentSnapshot<{ name?: string; image?: string }>;
-
-      contributions.push({
-        id: doc.id,
-        campaignId,
-        userId: userDoc.id,
-        userName: (userDoc.data() as { name?: string }).name || "Unknown",
-        userImage: userDoc.data()?.image,
-        amount: data.amount,
-        transactionHash: data.transactionHash,
-        timestamp: data.timestamp?.toDate(),
-      })
-    }
-
-    return contributions
+    return contributions as Contribution[]
   } catch (error) {
     console.error("Error getting campaign contributions:", error)
     throw error
   }
 }
 
-export async function getUserContributions(userId: string) {
+export async function getUserContributions(userId: string): Promise<Contribution[]> {
   try {
-    const userRef = doc(db, "users", userId)
+    const client = await clientPromise
+    const db = client.db()
 
-    const contributionsQuery = query(
-      collection(db, "contributions"),
-      where("userRef", "==", userRef),
-      orderBy("timestamp", "desc"),
-    )
+    const contributions = await db.collection("contributions").find({ userId }).sort({ timestamp: -1 }).toArray()
 
-    const snapshot = await getDocs(contributionsQuery)
-
-    const contributions: Contribution[] = []
-
-    for (const doc of snapshot.docs) {
-      const data = doc.data()
-
-      // Get campaign data
-      const campaignDoc = await getDoc(data.campaignRef)
-
-      contributions.push({
-        id: doc.id,
-        campaignId: campaignDoc.id,
-        userId,
-        userName: "", // Not needed for user's own contributions
-        amount: data.amount,
-        transactionHash: data.transactionHash,
-        timestamp: data.timestamp?.toDate(),
-      })
-    }
-
-    return contributions
+    return contributions as Contribution[]
   } catch (error) {
     console.error("Error getting user contributions:", error)
     throw error
   }
 }
-

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
@@ -8,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useFlagsmith } from "@/lib/flagsmith"
 import { getCampaigns } from "@/lib/contract-utils"
 
-interface Campaign {
+interface BlockchainCampaign {
   id: string
   title: string
   description: string
@@ -20,7 +21,7 @@ interface Campaign {
 }
 
 export function CampaignList() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [campaigns, setCampaigns] = useState<BlockchainCampaign[]>([])
   const [loading, setLoading] = useState(true)
   const flags = useFlagsmith()
   const maxCampaigns = flags?.getValue("max_displayed_campaigns") || 6
@@ -29,7 +30,7 @@ export function CampaignList() {
     const loadCampaigns = async () => {
       try {
         const data = await getCampaigns()
-        setCampaigns(data.slice(0, maxCampaigns))
+        setCampaigns(data.slice(0, Number(maxCampaigns)))
       } catch (error) {
         console.error("Error loading campaigns:", error)
       } finally {
@@ -83,11 +84,12 @@ export function CampaignList() {
 
         return (
           <Card key={campaign.id} className="overflow-hidden flex flex-col">
-            <div className="h-48 overflow-hidden">
-              <img
+            <div className="h-48 overflow-hidden relative">
+              <Image
                 src={campaign.imageUrl || "/placeholder.svg?height=200&width=400"}
                 alt={campaign.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             </div>
             <CardHeader>
@@ -118,4 +120,3 @@ export function CampaignList() {
     </div>
   )
 }
-

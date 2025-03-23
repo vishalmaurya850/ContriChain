@@ -1,117 +1,119 @@
-export interface Transaction {
-  id: string
-  type: "contribution" | "claim" | "refund"
-  campaignId: string
-  campaignTitle: string
-  userId: string
-  userName: string
-  amount: number
-  transactionHash: string
-  timestamp: Date
-  status: "pending" | "confirmed" | "failed"
-}
-
-// Sample data for development
-const sampleTransactions: Transaction[] = [
-  {
-    id: "1",
-    type: "contribution",
-    campaignId: "1",
-    campaignTitle: "Sustainable Energy Project",
-    userId: "user1",
-    userName: "Alice Johnson",
-    amount: 0.5,
-    transactionHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    status: "confirmed",
-  },
-  {
-    id: "2",
-    type: "contribution",
-    campaignId: "2",
-    campaignTitle: "Educational Platform",
-    userId: "user2",
-    userName: "Bob Smith",
-    amount: 0.2,
-    transactionHash: "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-    status: "confirmed",
-  },
-  {
-    id: "3",
-    type: "claim",
-    campaignId: "3",
-    campaignTitle: "Community Art Initiative",
-    userId: "user3",
-    userName: "Charlie Davis",
-    amount: 1.0,
-    transactionHash: "0x7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456",
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    status: "confirmed",
-  },
-  {
-    id: "4",
-    type: "contribution",
-    campaignId: "1",
-    campaignTitle: "Sustainable Energy Project",
-    userId: "user4",
-    userName: "Diana Wilson",
-    amount: 0.3,
-    transactionHash: "0xdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abc",
-    timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-    status: "pending",
-  },
-  {
-    id: "5",
-    type: "refund",
-    campaignId: "4",
-    campaignTitle: "Healthcare Innovation",
-    userId: "user5",
-    userName: "Ethan Brown",
-    amount: 0.4,
-    transactionHash: "0x567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234",
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    status: "confirmed",
-  },
-]
+import clientPromise from "./mongodb"
+import { ObjectId } from "mongodb"
+import type { Transaction } from "./models/types"
 
 export async function getAllTransactions(options?: {
   page?: number
   limit?: number
   status?: string
-}) {
-  // In a real implementation, this would fetch from the database
-  // For now, return sample data
+}): Promise<{
+  transactions: Transaction[]
+  totalPages: number
+  totalCount: number
+}> {
+  try {
+    const client = await clientPromise
+    const db = client.db()
 
-  const page = options?.page || 1
-  const pageSize = options?.limit || 10
-  const startIndex = (page - 1) * pageSize
-  const endIndex = startIndex + pageSize
+    const page = options?.page || 1
+    const limit = options?.limit || 10
+    const skip = (page - 1) * limit
 
-  let filteredTransactions = [...sampleTransactions]
+    const query: Record<string, string> = {}
 
-  if (options?.status && options.status !== "all") {
-    filteredTransactions = filteredTransactions.filter((t) => t.status === options.status)
+    if (options?.status && options.status !== "all") {
+      query.status = options.status
+    }
+
+    // Get total count for pagination
+    const totalCount = await db.collection("transactions").countDocuments(query)
+
+    // Get transactions with pagination
+    const transactions = await db
+      .collection("transactions")
+      .find(query)
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+
+    return {
+      transactions: transactions as Transaction[],
+      totalPages: Math.ceil(totalCount / limit),
+      totalCount,
+    }
+  } catch (error) {
+    console.error("Error getting transactions:", error)
+    throw error
   }
+}
 
-  const paginatedTransactions = filteredTransactions.slice(startIndex, endIndex)
+export async function getTransactionsByUser(userId: string): Promise<Transaction[]> {
+  try {
+    const client = await clientPromise
+    const db = client.db()
 
-  return {
-    transactions: paginatedTransactions,
-    totalPages: Math.ceil(filteredTransactions.length / pageSize),
-    totalCount: filteredTransactions.length,
+    const transactions = await db.collection("transactions").find({ userId }).sort({ timestamp: -1 }).toArray()
+
+    return transactions as Transaction[]
+  } catch (error) {
+    console.error("Error getting user transactions:", error)
+    throw error
   }
 }
 
-export async function getTransactionsByUser(userId: string) {
-  // In a real implementation, this would fetch from the database
-  // For now, filter sample data
-  return sampleTransactions.filter((t) => t.userId === userId)
+export async function getTransactionsByCampaign(campaignId: string): Promise<Transaction[]> {
+  try {
+    const client = await clientPromise
+    const db = client.db()
+
+    const transactions = await db.collection("transactions").find({ campaignId }).sort({ timestamp: -1 }).toArray()
+
+    return transactions as Transaction[]
+  } catch (error) {
+    console.error("Error getting campaign transactions:", error)
+    throw error
+  }
 }
 
-export async function getTransactionsByCampaign(campaignId: string) {
-  // In a real implementation, this would fetch from the database
-  // For now, filter sample data
-  return sampleTransactions.filter((t) => t.campaignId === campaignId)
+export async function createTransaction(data: Omit<Transaction, "_id">): Promise<Transaction> {
+  try {
+    const client = await clientPromise
+    const db = client.db()
+
+    const result = await db.collection("transactions").insertOne(data)
+
+    return {
+      ...data,
+      _id: result.insertedId,
+    }
+  } catch (error) {
+    console.error("Error creating transaction:", error)
+    throw error
+  }
 }
 
+export async function updateTransactionStatus(
+  transactionId: string,
+  status: "pending" | "confirmed" | "failed",
+): Promise<boolean> {
+  try {
+    const client = await clientPromise
+    const db = client.db()
+
+    const result = await db.collection("transactions").updateOne(
+      { _id: new ObjectId(transactionId) },
+      {
+        $set: {
+          status,
+          updatedAt: new Date(),
+        },
+      },
+    )
+
+    return result.modifiedCount === 1
+  } catch (error) {
+    console.error("Error updating transaction status:", error)
+    throw error
+  }
+}
