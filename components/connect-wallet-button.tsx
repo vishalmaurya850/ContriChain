@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Wallet } from "lucide-react"
+// import { ethers } from "ethers"
 import { Web3Provider } from "@ethersproject/providers"
 import { useSession } from "next-auth/react"
 

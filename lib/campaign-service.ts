@@ -1,160 +1,168 @@
-import clientPromise from "./mongodb"
-import { ObjectId } from "mongodb"
-import type { Campaign } from "./models/types"
+"use client"
 
-export async function getAllCampaigns(options?: {
+import useSWR from "swr"
+
+// Client-side fetcher function
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch data")
+    return res.json()
+  })
+
+export function useAllCampaigns(options?: {
   category?: string
   status?: string
-  limit?: number
-}): Promise<Campaign[]> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+}) {
+  // Build query string
+  let queryString = ""
+  if (options?.category) {
+    queryString += `${queryString ? "&" : "?"}category=${options.category}`
+  }
+  if (options?.status) {
+    queryString += `${queryString ? "&" : "?"}status=${options.status}`
+  }
 
-    const query: Record<string, string> = {}
+  // Use SWR for data fetching with caching and revalidation
+  const { data, error, isLoading, mutate } = useSWR(`/api/campaigns${queryString}`, fetcher)
 
-    if (options?.category) {
-      query.category = options.category
-    }
-
-    if (options?.status) {
-      query.status = options.status
-    }
-
-    let cursor = db.collection("campaigns").find(query).sort({ createdAt: -1 })
-
-    if (options?.limit) {
-      cursor = cursor.limit(options.limit)
-    }
-
-    const campaigns = await cursor.toArray()
-    return campaigns as Campaign[]
-  } catch (error) {
-    console.error("Error getting campaigns:", error)
-    throw error
+  return {
+    campaigns: data || [],
+    isLoading,
+    isError: error,
+    mutate,
   }
 }
 
-export async function getCampaignById(id: string): Promise<Campaign | null> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+export function useCampaignById(id: string) {
+  const { data, error, isLoading, mutate } = useSWR(id ? `/api/campaigns/${id}` : null, fetcher)
 
-    const campaign = await db.collection("campaigns").findOne({ _id: new ObjectId(id) })
-
-    if (!campaign) {
-      return null
-    }
-
-    return campaign as Campaign
-  } catch (error) {
-    console.error("Error getting campaign:", error)
-    throw error
+  return {
+    campaign: data,
+    isLoading,
+    isError: error,
+    mutate,
   }
 }
 
-export async function createCampaign(data: {
+export function useUserCampaigns(userId: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR(userId ? `/api/users/${userId}/campaigns` : null, fetcher)
+
+  return {
+    campaigns: data || [],
+    isLoading,
+    isError: error,
+    mutate,
+  }
+}
+
+// Client-side function to create a campaign
+export async function createCampaign(campaignData: {
   title: string
   description: string
   goal: number
   duration: number
   category: string
-  userId: string
-  userName: string
-  userImage?: string
   imageUrl?: string
   onChainId: string
   transactionHash: string
-}): Promise<Campaign> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+}) {
+  const response = await fetch("/api/campaigns", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(campaignData),
+  })
 
-    // Calculate deadline
-    const deadline = Math.floor(Date.now() / 1000) + data.duration * 24 * 60 * 60
-
-    const campaign: Campaign = {
-      title: data.title,
-      description: data.description,
-      goal: data.goal,
-      raised: 0,
-      deadline,
-      userId: data.userId,
-      userName: data.userName,
-      userImage: data.userImage,
-      imageUrl: data.imageUrl,
-      status: "active",
-      category: data.category,
-      createdAt: new Date(),
-      onChainId: data.onChainId,
-      transactionHash: data.transactionHash,
-    }
-
-    const result = await db.collection("campaigns").insertOne(campaign)
-
-    return {
-      ...campaign,
-      _id: result.insertedId,
-    }
-  } catch (error) {
-    console.error("Error creating campaign:", error)
-    throw error
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Failed to create campaign")
   }
+
+  return response.json()
 }
 
+// Client-side function to update a campaign
 export async function updateCampaign(
   id: string,
-  data: Partial<Omit<Campaign, "_id" | "userId" | "createdAt">>,
-): Promise<Campaign | null> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+  data: Partial<{
+    title: string
+    description: string
+    imageUrl: string
+    status: "active" | "paused" | "completed"
+  }>,
+) {
+  const response = await fetch(`/api/campaigns/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
 
-    const result = await db.collection("campaigns").findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      {
-        $set: {
-          ...data,
-          updatedAt: new Date(),
-        },
-      },
-      { returnDocument: "after" },
-    )
-
-    if (!result) {
-      throw new Error("Failed to update campaign: result is null")
-    }
-    return result.value as Campaign | null
-  } catch (error) {
-    console.error("Error updating campaign:", error)
-    throw error
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Failed to update campaign")
   }
+
+  return response.json()
 }
 
-export async function deleteCampaign(id: string): Promise<boolean> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+// Client-side function to delete a campaign
+export async function deleteCampaign(id: string) {
+  const response = await fetch(`/api/campaigns/${id}`, {
+    method: "DELETE",
+  })
 
-    const result = await db.collection("campaigns").deleteOne({ _id: new ObjectId(id) })
-
-    return result.deletedCount === 1
-  } catch (error) {
-    console.error("Error deleting campaign:", error)
-    throw error
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Failed to delete campaign")
   }
+
+  return true
 }
 
-export async function getUserCampaigns(userId: string): Promise<Campaign[]> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+export async function getAllCampaigns(filters: { category?: string; status?: string }) {
+  const response = await fetch("/api/campaigns", {
+    method: "POST",
+    body: JSON.stringify(filters),
+  })
+  const campaigns = await response.json()
 
-    const campaigns = await db.collection("campaigns").find({ userId }).sort({ createdAt: -1 }).toArray()
-
-    return campaigns as Campaign[]
-  } catch (error) {
-    console.error("Error getting user campaigns:", error)
-    throw error
+  type Campaign = {
+    id: string
+    title: string
+    description: string
+    goal: number
+    raised: number
+    status: string
+    category: string
+    imageUrl?: string
+    deadline: string
+    userName: string
   }
+
+  return campaigns.map((campaign: Campaign) => ({
+    id: campaign.id,
+    title: campaign.title,
+    description: campaign.description,
+    goal: campaign.goal,
+    raised: campaign.raised, // Ensure this is included
+    status: campaign.status,
+    category: campaign.category,
+    imageUrl: campaign.imageUrl,
+    deadline: campaign.deadline,
+    userName: campaign.userName,
+  }))
 }
+
+export async function getCampaignById(id: string): Promise<{ id: string; title: string; description: string; goal: number; status: string; category: string; imageUrl?: string; raised: number; deadline: string; userId: string; userName: string; createdAt: string; onChainId: string; transactionHash: string; }> {
+  const response = await fetch(`/api/campaigns/${id}`)
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch campaign")
+  }
+
+  return response.json()
+}
+

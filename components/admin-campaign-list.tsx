@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,29 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Eye, MoreHorizontal, Trash2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
-import { getAllCampaigns, deleteCampaign } from "@/lib/campaign-service"
-import type { Campaign } from "@/lib/models/types"
+import { useAllCampaigns, deleteCampaign } from "@/lib/campaign-service"
 
 export function AdminCampaignList() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [loading, setLoading] = useState(true)
+  const { campaigns, isLoading, mutate } = useAllCampaigns() as { campaigns: { id: string; title: string; userName: string; goal: number; raised: number; status: string; createdAt: string }[], isLoading: boolean, mutate: () => void }
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
-
-  useEffect(() => {
-    const fetchCampaigns = async () => {
-      try {
-        const allCampaigns = await getAllCampaigns()
-        setCampaigns(allCampaigns)
-      } catch (error) {
-        console.error("Error fetching campaigns:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCampaigns()
-  }, [])
 
   const handleDeleteCampaign = async (id: string) => {
     if (!confirm("Are you sure you want to delete this campaign? This action cannot be undone.")) {
@@ -43,8 +26,8 @@ export function AdminCampaignList() {
     try {
       await deleteCampaign(id)
 
-      // Remove campaign from state
-      setCampaigns(campaigns.filter((campaign) => campaign._id?.toString() !== id))
+      // Refresh the campaigns list
+      mutate()
 
       toast({
         title: "Campaign deleted",
@@ -60,7 +43,7 @@ export function AdminCampaignList() {
     }
   }
 
-  const filteredCampaigns = campaigns.filter((campaign) => {
+  const filteredCampaigns = campaigns.filter((campaign: { id: string; title: string; userName: string; goal: number; raised: number; status: string; createdAt: string }) => {
     return (
       campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.userName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -80,7 +63,7 @@ export function AdminCampaignList() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -130,7 +113,7 @@ export function AdminCampaignList() {
                 </TableRow>
               ) : (
                 filteredCampaigns.map((campaign) => (
-                  <TableRow key={campaign._id?.toString()}>
+                  <TableRow key={campaign.id}>
                     <TableCell className="font-medium">{campaign.title}</TableCell>
                     <TableCell>{campaign.userName}</TableCell>
                     <TableCell>{campaign.goal}</TableCell>
@@ -147,12 +130,12 @@ export function AdminCampaignList() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/campaigns/${campaign._id}`}>
+                            <Link href={`/campaigns/${campaign.id}`}>
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeleteCampaign(campaign._id?.toString() || "")}>
+                          <DropdownMenuItem onClick={() => handleDeleteCampaign(campaign.id)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
@@ -169,3 +152,4 @@ export function AdminCampaignList() {
     </Card>
   )
 }
+

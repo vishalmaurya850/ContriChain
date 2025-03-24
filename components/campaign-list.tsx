@@ -30,7 +30,7 @@ export function CampaignList() {
     const loadCampaigns = async () => {
       try {
         const data = await getCampaigns()
-        setCampaigns(data.slice(0, Number(maxCampaigns)))
+        setCampaigns(data.slice(0, typeof maxCampaigns === "number" ? maxCampaigns : 6))
       } catch (error) {
         console.error("Error loading campaigns:", error)
       } finally {
@@ -120,3 +120,4 @@ export function CampaignList() {
     </div>
   )
 }
+

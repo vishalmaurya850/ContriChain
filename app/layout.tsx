@@ -7,17 +7,13 @@ import { Toaster } from "@/components/ui/toaster"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import logo from "./favicon.ico"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "CryptoFund | Decentralized Crowdfunding Platform",
   description: "Support innovative projects and ideas with cryptocurrency. Transparent, secure, and community-driven.",
-  icons: {
-    icon: logo.src,
-  },
-};
+}
 
 export default function RootLayout({
   children,

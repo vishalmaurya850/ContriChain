@@ -1,108 +1,60 @@
-import clientPromise from "./mongodb"
-import { ObjectId } from "mongodb"
-import type { Contribution } from "./models/types"
+"use client"
 
-export async function createContribution(data: {
-  campaignId: string
-  campaignTitle: string
-  userId: string
-  userName: string
-  userImage?: string
-  amount: number
-  transactionHash: string
-}): Promise<Contribution> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+import useSWR from "swr"
 
-    // Start a session for transaction
-    const session = client.startSession()
+// Client-side fetcher function
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch data")
+    return res.json()
+  })
 
-    let result: { insertedId: ObjectId } = { insertedId: new ObjectId() }
+export function useCampaignContributions(campaignId: string) {
+  const { data, error, isLoading, mutate } = useSWR(
+    campaignId ? `/api/campaigns/${campaignId}/contributions` : null,
+    fetcher,
+  )
 
-    try {
-      await session.withTransaction(async () => {
-        // Update campaign raised amount
-        await db
-          .collection("campaigns")
-          .updateOne({ _id: new ObjectId(data.campaignId) }, { $inc: { raised: data.amount } }, { session })
-
-        // Create contribution
-        const contribution: Contribution = {
-          campaignId: data.campaignId,
-          campaignTitle: data.campaignTitle,
-          userId: data.userId,
-          userName: data.userName,
-          userImage: data.userImage,
-          amount: data.amount,
-          transactionHash: data.transactionHash,
-          timestamp: new Date(),
-        }
-
-        result = await db.collection("contributions").insertOne(contribution, { session })
-        contribution._id = result.insertedId
-
-        // Create transaction record
-        await db.collection("transactions").insertOne(
-          {
-            type: "contribution",
-            campaignId: data.campaignId,
-            campaignTitle: data.campaignTitle,
-            userId: data.userId,
-            userName: data.userName,
-            amount: data.amount,
-            transactionHash: data.transactionHash,
-            timestamp: new Date(),
-            status: "confirmed",
-          },
-          { session },
-        )
-      })
-    } finally {
-      await session.endSession()
-    }
-
-    return {
-      _id: result?.insertedId,
-      campaignId: data.campaignId,
-      campaignTitle: data.campaignTitle,
-      userId: data.userId,
-      userName: data.userName,
-      userImage: data.userImage,
-      amount: data.amount,
-      transactionHash: data.transactionHash,
-      timestamp: new Date(),
-    }
-  } catch (error) {
-    console.error("Error creating contribution:", error)
-    throw error
+  return {
+    contributions: data || [],
+    isLoading,
+    isError: error,
+    mutate,
   }
 }
 
-export async function getCampaignContributions(campaignId: string): Promise<Contribution[]> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+export function useUserContributions(userId: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR(userId ? `/api/users/${userId}/contributions` : null, fetcher)
 
-    const contributions = await db.collection("contributions").find({ campaignId }).sort({ timestamp: -1 }).toArray()
-
-    return contributions as Contribution[]
-  } catch (error) {
-    console.error("Error getting campaign contributions:", error)
-    throw error
+  return {
+    contributions: data || [],
+    isLoading,
+    isError: error,
+    mutate,
   }
 }
 
-export async function getUserContributions(userId: string): Promise<Contribution[]> {
-  try {
-    const client = await clientPromise
-    const db = client.db()
+// Client-side function to create a contribution
+export async function createContribution(
+  campaignId: string,
+  data: {
+    amount: number
+    transactionHash: string
+  },
+) {
+  const response = await fetch(`/api/campaigns/${campaignId}/contribute`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
 
-    const contributions = await db.collection("contributions").find({ userId }).sort({ timestamp: -1 }).toArray()
-
-    return contributions as Contribution[]
-  } catch (error) {
-    console.error("Error getting user contributions:", error)
-    throw error
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Failed to create contribution")
   }
+
+  return response.json()
 }
+

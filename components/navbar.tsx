@@ -16,12 +16,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+
+interface Session {
+  user: {
+    id: string
+    name?: string
+    email?: string
+    isAdmin?: boolean
+    walletAddress?: string | null
+  }
+}
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const { data: sessionData, status } = useSession()
+  const session = sessionData as Session
   const isLoading = status === "loading"
 
   // Close mobile menu when route changes
@@ -130,7 +141,6 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
                       <AvatarFallback>
                         {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
                       </AvatarFallback>

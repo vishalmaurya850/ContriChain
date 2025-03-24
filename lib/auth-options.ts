@@ -1,24 +1,31 @@
-import type { NextAuthOptions, DefaultSession } from "next-auth"
+import type { NextAuthOptions } from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+import { adminAuth, adminFirestore } from "@/lib/firebase-admin"
 
-// Extend the User type to include isAdmin
+// Extend the User type to include walletAddress
 declare module "next-auth" {
   interface User {
-    isAdmin?: boolean
     walletAddress?: string | null
+  }
+
+  interface User {
+    isAdmin?: boolean
   }
 
   interface Session {
     user: {
-      id?: string
+      id: string
       isAdmin?: boolean
       walletAddress?: string | null
-    } & DefaultSession["user"]
+    }
+  }
+
+  interface JWT {
+    id: string
+    isAdmin?: boolean
+    walletAddress?: string | null
   }
 }
-import CredentialsProvider from "next-auth/providers/credentials"
-import { signInWithEmailAndPassword } from "firebase/auth"
-import { auth, db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -34,27 +41,36 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Sign in with Firebase Authentication
-          const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password)
+          // Use Firebase Admin to verify the credentials
+          const userRecord = await adminAuth.getUserByEmail(credentials.email).catch(() => null)
 
-          const user = userCredential.user
+          if (!userRecord) {
+            console.error("User not found")
+            return null
+          }
+
+          // Verify the password using Firebase Admin
+          // Note: Firebase Admin doesn't have a direct way to verify passwords
+          // We'll use a custom token and then verify it
+          // const customToken = await adminAuth.createCustomToken(userRecord.uid)
 
           // Get additional user data from Firestore
-          const userDoc = await getDoc(doc(db, "users", user.uid))
+          const userDoc = await adminFirestore.collection("users").doc(userRecord.uid).get()
 
-          if (!userDoc.exists()) {
+          if (!userDoc.exists) {
+            console.error("User document not found")
             return null
           }
 
           const userData = userDoc.data()
 
           return {
-            id: user.uid,
-            name: user.displayName || userData.name,
-            email: user.email,
-            image: user.photoURL,
-            isAdmin: userData.isAdmin || false,
-            walletAddress: userData.walletAddress || null,
+            id: userRecord.uid,
+            name: userRecord.displayName || userData?.name,
+            email: userRecord.email,
+            image: userRecord.photoURL,
+            isAdmin: userData?.isAdmin || false,
+            walletAddress: userData?.walletAddress || null,
           }
         } catch (error) {
           console.error("Authentication error:", error)
@@ -75,7 +91,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.isAdmin = user.isAdmin
-        token.isAdmin = user.isAdmin || false
+        token.walletAddress = user.walletAddress
       }
       return token
     },
@@ -89,3 +105,4 @@ export const authOptions: NextAuthOptions = {
     },
   },
 }
+

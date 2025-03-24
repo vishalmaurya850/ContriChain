@@ -8,13 +8,20 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 
 interface CampaignPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function generateMetadata({ params }: CampaignPageProps): Promise<Metadata> {
-  const campaign = await getCampaignById(params.id)
+  const { id } = await params // Await the params to resolve the promise
+  const campaignData = await getCampaignById(id)
+  const campaign = { 
+    ...campaignData, 
+    deadline: Number(campaignData.deadline), 
+    status: campaignData.status as "active" | "paused" | "completed" | "refunded",
+    createdAt: new Date(campaignData.createdAt)
+  }
 
   if (!campaign) {
     return {
@@ -29,7 +36,14 @@ export async function generateMetadata({ params }: CampaignPageProps): Promise<M
 }
 
 export default async function CampaignPage({ params }: CampaignPageProps) {
-  const campaign = await getCampaignById(params.id)
+  const { id } = await params // Await the params to resolve the promise
+  const campaignData = await getCampaignById(id)
+  const campaign = { 
+    ...campaignData, 
+    deadline: Number(campaignData.deadline), 
+    status: campaignData.status as "active" | "paused" | "completed" | "refunded",
+    createdAt: new Date(campaignData.createdAt)
+  }
 
   if (!campaign) {
     notFound()
@@ -47,10 +61,10 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
               <TabsTrigger value="contributors">Contributors</TabsTrigger>
             </TabsList>
             <TabsContent value="updates" className="pt-4">
-              <CampaignUpdates campaignId={params.id} />
+              <CampaignUpdates campaignId={id} />
             </TabsContent>
             <TabsContent value="contributors" className="pt-4">
-              <CampaignContributors campaignId={params.id} />
+              <CampaignContributors campaignId={id} />
             </TabsContent>
           </Tabs>
         </div>
@@ -62,4 +76,3 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
     </main>
   )
 }
-

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-// import { ethers } from "ethers"
 import { Web3Provider } from "@ethersproject/providers"
+import { ethers } from "ethers"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
@@ -82,6 +82,7 @@ export function CreateCampaignForm() {
     setIsSubmitting(true)
 
     try {
+      // Connect to provider
       const provider = new Web3Provider(window.ethereum)
 
       // Request account access
@@ -89,7 +90,7 @@ export function CreateCampaignForm() {
 
       // Create campaign on blockchain
       const result = await createCampaignOnChain(
-        provider,
+        provider as unknown as ethers.JsonRpcProvider,
         data.title,
         data.description,
         Number(data.goal),

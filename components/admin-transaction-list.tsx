@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,62 +9,41 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ExternalLink } from "lucide-react"
-import Link from "next/link"
-
-interface Transaction {
-  id: string
-  type: "contribution" | "claim" | "refund"
-  campaignId: string
-  campaignTitle: string
-  userId: string
-  userName: string
-  amount: number
-  transactionHash: string
-  timestamp: Date
-  status: "pending" | "confirmed" | "failed"
-}
+import { useAdminTransactions } from "@/lib/admin-service-client"
 
 export function AdminTransactionList() {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [filter, setFilter] = useState<string>("")
   const [statusFilter, setStatusFilter] = useState<string>("")
+  const [filter, setFilter] = useState<string>("")
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch(
-          `/api/admin/transactions?page=${page}&limit=10${statusFilter ? `&status=${statusFilter}` : ""}`,
-        )
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch transactions")
-        }
-
-        const data = await response.json()
-        setTransactions(data.transactions)
-        setTotalPages(data.totalPages)
-      } catch (error) {
-        console.error("Error fetching transactions:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTransactions()
-  }, [page, statusFilter])
+  const { transactions, totalPages, isLoading } = useAdminTransactions({
+    page,
+    limit: 10,
+    status: statusFilter || undefined,
+  }) as {
+    transactions: {
+      id: string
+      type: string
+      campaignId: string
+      campaignTitle: string
+      userName: string
+      amount: number
+      status: string
+      timestamp: string
+      transactionHash: string
+    }[]
+    totalPages: number
+    isLoading: boolean
+  }
 
   const filteredTransactions = transactions.filter((transaction) => {
     if (!filter) return true
 
     const searchTerm = filter.toLowerCase()
     return (
-      transaction.campaignTitle.toLowerCase().includes(searchTerm) ||
-      transaction.userName.toLowerCase().includes(searchTerm) ||
-      transaction.transactionHash.toLowerCase().includes(searchTerm)
+      transaction.campaignTitle?.toLowerCase().includes(searchTerm) ||
+      transaction.userName?.toLowerCase().includes(searchTerm) ||
+      transaction.transactionHash?.toLowerCase().includes(searchTerm)
     )
   })
 
@@ -124,7 +104,7 @@ export function AdminTransactionList() {
           </div>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="space-y-4">
             {Array(5)
               .fill(0)
@@ -212,4 +192,3 @@ export function AdminTransactionList() {
     </Card>
   )
 }
-

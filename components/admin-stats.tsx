@@ -1,36 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getAdminStats } from "@/lib/admin-service"
+import { useAdminStats } from "@/lib/admin-service-client"
 
 export function AdminStats() {
-  const [stats, setStats] = useState({
-    totalCampaigns: 0,
-    activeCampaigns: 0,
-    totalUsers: 0,
-    totalFundsRaised: 0,
-    transactionsToday: 0,
-  })
-  const [loading, setLoading] = useState(true)
+  const { stats, isLoading } = useAdminStats()
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const adminStats = await getAdminStats()
-        setStats(adminStats)
-      } catch (error) {
-        console.error("Error fetching admin stats:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStats()
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {Array(5)
@@ -94,4 +71,3 @@ export function AdminStats() {
     </div>
   )
 }
-

@@ -1,56 +1,42 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSession } from "next-auth/react"
-import { getUserCampaigns } from "@/lib/campaign-service"
-import { getUserContributions } from "@/lib/contribution-service"
-import type { Campaign, Contribution } from "@/lib/models/types"
+import { useUserCampaigns } from "@/lib/campaign-service"
+import { useUserContributions } from "@/lib/contribution-service"
+import { useMemo } from "react"
 
 export function UserStats() {
-  const [stats, setStats] = useState({
-    totalCampaigns: 0,
-    activeCampaigns: 0,
-    totalContributed: 0,
-    campaignsContributed: 0,
-  })
-  const [loading, setLoading] = useState(true)
   const { data: session } = useSession()
+  const { campaigns, isLoading: campaignsLoading }: { campaigns: { status: string }[]; isLoading: boolean } = useUserCampaigns(session?.user?.id)
+  const { contributions, isLoading: contributionsLoading }: { contributions: { amount: number; campaignId: string }[]; isLoading: boolean } = useUserContributions(session?.user?.id)
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!session?.user?.id) return
+  const isLoading = campaignsLoading || contributionsLoading
 
-      try {
-        // Fetch user campaigns
-        const campaigns: Campaign[] = await getUserCampaigns(session.user.id)
-        const activeCampaigns = campaigns.filter((c) => c.status === "active").length
-
-        // Fetch user contributions
-        const contributions: Contribution[] = await getUserContributions(session.user.id)
-        const totalContributed = contributions.reduce((sum, c) => sum + c.amount, 0)
-
-        // Get unique campaigns contributed to
-        const uniqueCampaignIds = new Set(contributions.map((c) => c.campaignId))
-
-        setStats({
-          totalCampaigns: campaigns.length,
-          activeCampaigns,
-          totalContributed,
-          campaignsContributed: uniqueCampaignIds.size,
-        })
-      } catch (error) {
-        console.error("Error fetching user stats:", error)
-      } finally {
-        setLoading(false)
+  const stats = useMemo(() => {
+    if (isLoading) {
+      return {
+        totalCampaigns: 0,
+        activeCampaigns: 0,
+        totalContributed: 0,
+        campaignsContributed: 0,
       }
     }
 
-    fetchStats()
-  }, [session?.user?.id])
+    const activeCampaigns = campaigns.filter((c: { status: string }) => c.status === "active").length
+    const totalContributed = contributions.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0)
+    const uniqueCampaignIds = new Set(contributions.map((c) => c.campaignId))
 
-  if (loading) {
+    return {
+      totalCampaigns: campaigns.length,
+      activeCampaigns,
+      totalContributed,
+      campaignsContributed: uniqueCampaignIds.size,
+    }
+  }, [campaigns, contributions, isLoading])
+
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array(4)
@@ -106,3 +92,4 @@ export function UserStats() {
     </div>
   )
 }
+

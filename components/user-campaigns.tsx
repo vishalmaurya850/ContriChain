@@ -1,6 +1,4 @@
 "use client"
-
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,32 +7,40 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2 } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { getUserCampaigns } from "@/lib/campaign-service"
-import type { Campaign } from "@/lib/models/types"
+import { useUserCampaigns, deleteCampaign } from "@/lib/campaign-service"
+import { useToast } from "@/hooks/use-toast"
 
 export function UserCampaigns() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [loading, setLoading] = useState(true)
   const { data: session } = useSession()
+  const { campaigns, isLoading, mutate } = useUserCampaigns(session?.user?.id) as { campaigns: Array<{ id: string; title: string; description: string; raised: number; goal: number; createdAt: string; status: string; deadline: number }>, isLoading: boolean, mutate: () => void }
+  const { toast } = useToast()
 
-  useEffect(() => {
-    const fetchCampaigns = async () => {
-      if (!session?.user?.id) return
-
-      try {
-        const userCampaigns = await getUserCampaigns(session.user.id)
-        setCampaigns(userCampaigns)
-      } catch (error) {
-        console.error("Error fetching user campaigns:", error)
-      } finally {
-        setLoading(false)
-      }
+  const handleDeleteCampaign = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this campaign? This action cannot be undone.")) {
+      return
     }
 
-    fetchCampaigns()
-  }, [session?.user?.id])
+    try {
+      await deleteCampaign(id)
 
-  if (loading) {
+      // Refresh the campaigns list
+      mutate()
+
+      toast({
+        title: "Campaign deleted",
+        description: "Your campaign has been deleted successfully",
+      })
+    } catch (error) {
+      console.error("Error deleting campaign:", error)
+      toast({
+        title: "Failed to delete campaign",
+        description: "There was an error deleting your campaign. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Array(2)
@@ -79,7 +85,7 @@ export function UserCampaigns() {
         const progress = Math.min(Math.round((raisedAmount / goalAmount) * 100), 100)
 
         return (
-          <Card key={campaign._id?.toString()}>
+          <Card key={campaign.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -103,16 +109,16 @@ export function UserCampaigns() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Link href={`/campaigns/${campaign._id}`}>
+              <Link href={`/campaigns/${campaign.id}`}>
                 <Button variant="outline">View Campaign</Button>
               </Link>
               <div className="flex gap-2">
-                <Link href={`/campaigns/${campaign._id}/edit`}>
+                <Link href={`/campaigns/${campaign.id}/edit`}>
                   <Button variant="ghost" size="icon">
                     <Edit className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" onClick={() => handleDeleteCampaign(campaign.id)}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -123,3 +129,4 @@ export function UserCampaigns() {
     </div>
   )
 }
+
