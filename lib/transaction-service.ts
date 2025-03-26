@@ -1,5 +1,4 @@
-import clientPromise from "./mongodb"
-import { ObjectId } from "mongodb"
+import { findMany, countDocuments, insertOne, updateOne, createObjectId } from "@/lib/mongodb-admin"
 import type { Transaction } from "./models/types"
 
 export async function getAllTransactions(options?: {
@@ -12,33 +11,40 @@ export async function getAllTransactions(options?: {
   totalCount: number
 }> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
     const page = options?.page || 1
     const limit = options?.limit || 10
     const skip = (page - 1) * limit
 
-    const query: Record<string, string> = {}
+    const query: Record<string, string | number | boolean> = {}
 
     if (options?.status && options.status !== "all") {
       query.status = options.status
     }
 
     // Get total count for pagination
-    const totalCount = await db.collection("transactions").countDocuments(query)
+    const totalCount = await countDocuments("transactions", query)
 
     // Get transactions with pagination
-    const transactions = await db
-      .collection("transactions")
-      .find(query)
-      .sort({ timestamp: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray()
+    const transactions = await findMany("transactions", query, {
+      sort: { timestamp: -1 },
+      skip,
+      limit,
+    })
 
     return {
-      transactions: transactions as Transaction[],
+      transactions: transactions.map((tx) => ({
+        id: tx._id.toString(),
+        type: tx.type,
+        campaignId: tx.campaignId,
+        campaignTitle: tx.campaignTitle,
+        userId: tx.userId,
+        userName: tx.userName || "", // Default to empty string if not present
+        transactionHash: tx.transactionHash || "", // Default to empty string if not present
+        amount: tx.amount,
+        status: tx.status,
+        timestamp: tx.timestamp,
+        updatedAt: tx.updatedAt,
+      })) as Transaction[],
       totalPages: Math.ceil(totalCount / limit),
       totalCount,
     }
@@ -50,12 +56,21 @@ export async function getAllTransactions(options?: {
 
 export async function getTransactionsByUser(userId: string): Promise<Transaction[]> {
   try {
-    const client = await clientPromise
-    const db = client.db()
+    const transactions = await findMany("transactions", { userId }, { sort: { timestamp: -1 } })
 
-    const transactions = await db.collection("transactions").find({ userId }).sort({ timestamp: -1 }).toArray()
-
-    return transactions as Transaction[]
+    return transactions.map((tx) => ({
+      id: tx._id.toString(),
+      type: tx.type,
+      campaignId: tx.campaignId,
+      campaignTitle: tx.campaignTitle,
+      userId: tx.userId,
+      userName: tx.userName || "", // Default to empty string if not present
+      transactionHash: tx.transactionHash || "", // Default to empty string if not present
+      amount: tx.amount,
+      status: tx.status,
+      timestamp: tx.timestamp,
+      updatedAt: tx.updatedAt,
+    })) as Transaction[]
   } catch (error) {
     console.error("Error getting user transactions:", error)
     throw error
@@ -64,29 +79,35 @@ export async function getTransactionsByUser(userId: string): Promise<Transaction
 
 export async function getTransactionsByCampaign(campaignId: string): Promise<Transaction[]> {
   try {
-    const client = await clientPromise
-    const db = client.db()
+    const transactions = await findMany("transactions", { campaignId }, { sort: { timestamp: -1 } })
 
-    const transactions = await db.collection("transactions").find({ campaignId }).sort({ timestamp: -1 }).toArray()
-
-    return transactions as Transaction[]
+    return transactions.map((tx) => ({
+      id: tx._id.toString(),
+      type: tx.type,
+      campaignId: tx.campaignId,
+      campaignTitle: tx.campaignTitle,
+      userId: tx.userId,
+      userName: tx.userName || "", // Default to empty string if not present
+      transactionHash: tx.transactionHash || "", // Default to empty string if not present
+      amount: tx.amount,
+      status: tx.status,
+      timestamp: tx.timestamp,
+      updatedAt: tx.updatedAt,
+    })) as Transaction[]
   } catch (error) {
     console.error("Error getting campaign transactions:", error)
     throw error
   }
 }
 
-export async function createTransaction(data: Omit<Transaction, "_id">): Promise<Transaction> {
+export async function createTransaction(data: Omit<Transaction, "id">): Promise<Transaction> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
-    const result = await db.collection("transactions").insertOne(data)
+    const result = await insertOne("transactions", data as unknown as Document)
 
     return {
+      id: result.insertedId.toString(),
       ...data,
-      _id: result.insertedId,
-    }
+    } as Transaction
   } catch (error) {
     console.error("Error creating transaction:", error)
     throw error
@@ -98,18 +119,16 @@ export async function updateTransactionStatus(
   status: "pending" | "confirmed" | "failed",
 ): Promise<boolean> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
-    const result = await db.collection("transactions").updateOne(
-      { _id: new ObjectId(transactionId) },
+    const result = await updateOne(
+      "transactions",
+      { _id: createObjectId(transactionId) },
       {
         $set: {
           status,
           updatedAt: new Date(),
         },
       },
-    )
+    ) as { modifiedCount: number }
 
     return result.modifiedCount === 1
   } catch (error) {
@@ -117,3 +136,4 @@ export async function updateTransactionStatus(
     throw error
   }
 }
+

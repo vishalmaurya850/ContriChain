@@ -1,4 +1,4 @@
-import { adminFirestore } from "@/lib/firebase-admin"
+import { findMany, findOne, createObjectId } from "@/lib/mongodb-admin"
 
 export async function getAllCampaigns(options?: {
   category?: string
@@ -6,27 +6,29 @@ export async function getAllCampaigns(options?: {
   limit?: number
 }) {
   try {
-    let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = adminFirestore.collection("campaigns")
+    const query: Record<string, unknown> = {}
 
     if (options?.category) {
-      query = query.where("category", "==", options.category)
+      query.category = options.category
     }
 
     if (options?.status) {
-      query = query.where("status", "==", options.status)
+      query.status = options.status
     }
 
-    query = query.orderBy("createdAt", "desc")
+    let campaigns = await findMany("campaigns", query)
+
+    // Sort by createdAt in descending order
+    campaigns.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     if (options?.limit) {
-      query = query.limit(options.limit)
+      campaigns = campaigns.slice(0, options.limit)
     }
 
-    const campaignsSnapshot = await query.get()
-
-    return campaignsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+    return campaigns.map((campaign) => ({
+      id: campaign._id.toString(),
+      ...campaign,
+      _id: undefined,
     }))
   } catch (error) {
     console.error("Error getting campaigns:", error)
@@ -36,15 +38,16 @@ export async function getAllCampaigns(options?: {
 
 export async function getCampaignById(id: string) {
   try {
-    const campaignDoc = await adminFirestore.collection("campaigns").doc(id).get()
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
 
-    if (!campaignDoc.exists) {
+    if (!campaign) {
       return null
     }
 
     return {
-      id: campaignDoc.id,
-      ...campaignDoc.data(),
+      id: campaign._id.toString(),
+      ...campaign,
+      _id: undefined,
     }
   } catch (error) {
     console.error("Error getting campaign:", error)
@@ -54,15 +57,12 @@ export async function getCampaignById(id: string) {
 
 export async function getUserCampaigns(userId: string) {
   try {
-    const campaignsSnapshot = await adminFirestore
-      .collection("campaigns")
-      .where("userId", "==", userId)
-      .orderBy("createdAt", "desc")
-      .get()
+    const campaigns = await findMany("campaigns", { userId })
 
-    return campaignsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+    return campaigns.map((campaign) => ({
+      id: campaign._id.toString(),
+      ...campaign,
+      _id: undefined,
     }))
   } catch (error) {
     console.error("Error getting user campaigns:", error)

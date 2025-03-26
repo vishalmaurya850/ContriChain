@@ -1,29 +1,16 @@
-import type { NextAuthOptions } from "next-auth"
+import type { NextAuthOptions} from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { adminAuth, adminFirestore } from "@/lib/firebase-admin"
+import { compare } from "bcryptjs"
+import clientPromise from "./mongodb"
 
-// Extend the User type to include walletAddress
 declare module "next-auth" {
   interface User {
-    walletAddress?: string | null
-  }
-
-  interface User {
     isAdmin?: boolean
+    walletAddress?: string | null
   }
 
   interface Session {
-    user: {
-      id: string
-      isAdmin?: boolean
-      walletAddress?: string | null
-    }
-  }
-
-  interface JWT {
-    id: string
-    isAdmin?: boolean
-    walletAddress?: string | null
+    user: User | undefined
   }
 }
 
@@ -41,36 +28,34 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Use Firebase Admin to verify the credentials
-          const userRecord = await adminAuth.getUserByEmail(credentials.email).catch(() => null)
+          const client = await clientPromise
+          const db = client.db()
 
-          if (!userRecord) {
+          // Find user by email
+          const user = await db.collection("users").findOne({
+            email: credentials.email.toLowerCase(),
+          })
+
+          if (!user) {
             console.error("User not found")
             return null
           }
 
-          // Verify the password using Firebase Admin
-          // Note: Firebase Admin doesn't have a direct way to verify passwords
-          // We'll use a custom token and then verify it
-          // const customToken = await adminAuth.createCustomToken(userRecord.uid)
+          // Verify password
+          const isPasswordValid = await compare(credentials.password, user.password)
 
-          // Get additional user data from Firestore
-          const userDoc = await adminFirestore.collection("users").doc(userRecord.uid).get()
-
-          if (!userDoc.exists) {
-            console.error("User document not found")
+          if (!isPasswordValid) {
+            console.error("Invalid password")
             return null
           }
 
-          const userData = userDoc.data()
-
           return {
-            id: userRecord.uid,
-            name: userRecord.displayName || userData?.name,
-            email: userRecord.email,
-            image: userRecord.photoURL,
-            isAdmin: userData?.isAdmin || false,
-            walletAddress: userData?.walletAddress || null,
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            isAdmin: user.isAdmin || false,
+            walletAddress: user.walletAddress || null,
           }
         } catch (error) {
           console.error("Authentication error:", error)
@@ -105,4 +90,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 }
-

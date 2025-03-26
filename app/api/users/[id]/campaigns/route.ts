@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
-import { adminFirestore } from "@/lib/firebase-admin"
+import { findMany } from "@/lib/mongodb-admin"
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
@@ -12,24 +12,22 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
 
   try {
-    const { id } = await context.params // Await the params to resolve the promise
+    // Await the params to resolve the promise
+    const { id } = await context.params
 
-    if (session.user.id !== id && !session.user.isAdmin) {
+    if (!session.user || (session.user.id !== id && !session.user.isAdmin)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const campaignsSnapshot = await adminFirestore
-      .collection("campaigns")
-      .where("userId", "==", id)
-      .orderBy("createdAt", "desc")
-      .get()
+    const campaigns = await findMany("campaigns", { userId: id })
 
-    const campaigns = campaignsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
-
-    return NextResponse.json(campaigns)
+    return NextResponse.json(
+      campaigns.map((campaign) => ({
+        id: campaign._id.toString(),
+        ...campaign,
+        _id: undefined,
+      })),
+    )
   } catch (error) {
     console.error("Error fetching user campaigns:", error)
     return NextResponse.json({ error: "Failed to fetch user campaigns" }, { status: 500 })

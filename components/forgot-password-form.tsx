@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { sendPasswordResetEmail } from "firebase/auth"
-import { auth } from "@/lib/firebase"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle } from "lucide-react"
 
@@ -36,7 +34,18 @@ export function ForgotPasswordForm() {
     setIsLoading(true)
 
     try {
-      await sendPasswordResetEmail(auth, data.email)
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: data.email }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to send reset email")
+      }
+
       setIsSuccess(true)
       toast({
         title: "Reset email sent",
@@ -82,4 +91,3 @@ export function ForgotPasswordForm() {
     </form>
   )
 }
-

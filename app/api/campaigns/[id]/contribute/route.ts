@@ -2,7 +2,22 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { z } from "zod"
-import { adminFirestore } from "@/lib/firebase-admin"
+import { findOne, insertOne, updateOne, createObjectId } from "@/lib/mongodb-admin"
+import { ObjectId } from "mongodb"
+import type { CustomDocument } from "@/lib/mongodb-admin"
+
+// Extend CustomDocument type to include 'type' property
+interface TransactionDocument extends CustomDocument {
+  type: string
+  campaignId: string
+  campaignTitle: string
+  userId: string
+  userName: string
+  amount: number
+  transactionHash: string
+  timestamp: Date
+  status: string
+}
 
 // Schema for contribution
 const contributionSchema = z.object({
@@ -22,15 +37,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const { id } = await context.params
 
     // Check if campaign exists
-    const campaignDoc = await adminFirestore.collection("campaigns").doc(id).get()
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
 
-    if (!campaignDoc.exists) {
+    if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
-    }
-
-    const campaignData = campaignDoc.data()
-    if (!campaignData) {
-      return NextResponse.json({ error: "Campaign data is invalid" }, { status: 500 })
     }
 
     const body = await request.json()
@@ -42,56 +52,55 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!session.user) {
       return NextResponse.json({ error: "User session is invalid" }, { status: 400 })
     }
-    const userId = session.user.id // Assuming id is used as the unique identifier
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is invalid" }, { status: 400 })
-    }
-    const userDoc = await adminFirestore.collection("users").doc(userId).get()
+    const user = await findOne("users", { _id: createObjectId(session.user.id) })
 
-    if (!userDoc.exists) {
+    if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const userData = userDoc.data()
-
-    // Create contribution in Firestore
+    // Create contribution in MongoDB
     const contributionData = {
       campaignId: id,
-      campaignTitle: campaignData.title,
-      userId: userId,
-      userName: userData?.name ?? "Anonymous",
-      userImage: userData?.image ?? "default-image-url",
+      campaignTitle: campaign.title,
+      userId: session.user.id,
+      userName: user.name || session.user.name,
+      userImage: user.image || session.user.image,
       amount: validatedData.amount,
       transactionHash: validatedData.transactionHash,
       timestamp: new Date(),
     }
 
-    const contributionRef = await adminFirestore.collection("contributions").add(contributionData)
+    const contributionResult = await insertOne("contributions", contributionData as unknown as Document)
 
     // Update campaign raised amount
-    await adminFirestore
-      .collection("campaigns")
-      .doc(id)
-      .update({
-        raised: campaignData.raised + validatedData.amount,
-      })
+    await updateOne<{ _id: ObjectId; raised: number }>(
+      "campaigns",
+      { _id: createObjectId(id) },
+      {
+        $set: {
+          raised: campaign.raised + validatedData.amount,
+        },
+      },
+    )
 
-    // Create transaction record
-    await adminFirestore.collection("transactions").add({
+    const transactionData: TransactionDocument = {
+      _id: new ObjectId(), // Generate a new ObjectId for the transaction
       type: "contribution",
       campaignId: id,
-      campaignTitle: campaignData.title,
-      userId: userId,
-      userName: userData?.name ?? "Anonymous",
+      campaignTitle: campaign.title,
+      userId: session.user.id,
+      userName: user.name || session.user.name,
       amount: validatedData.amount,
       transactionHash: validatedData.transactionHash,
       timestamp: new Date(),
       status: "confirmed",
-    })
+    }
+
+    await insertOne("transactions", transactionData as unknown as Document)
 
     return NextResponse.json(
       {
-        id: contributionRef.id,
+        id: contributionResult.insertedId.toString(),
         ...contributionData,
       },
       { status: 201 },

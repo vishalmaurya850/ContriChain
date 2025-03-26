@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { z } from "zod"
-import { adminFirestore } from "@/lib/firebase-admin"
+import { getCollection, findOne, insertOne } from "@/lib/mongodb-admin"
+import { ObjectId } from "mongodb"
 
 // Schema for campaign creation
 const campaignSchema = z.object({
@@ -18,15 +19,17 @@ const campaignSchema = z.object({
 
 export async function GET() {
   try {
-    // Get campaigns from Firestore
-    const campaignsSnapshot = await adminFirestore.collection("campaigns").orderBy("createdAt", "desc").get()
+    // Get campaigns from MongoDB
+    const campaignsCollection = await getCollection("campaigns")
+    const campaigns = await campaignsCollection.find().sort({ createdAt: -1 }).toArray()
 
-    const campaigns = campaignsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
-
-    return NextResponse.json(campaigns)
+    return NextResponse.json(
+      campaigns.map((campaign) => ({
+        id: campaign._id.toString(),
+        ...campaign,
+        _id: undefined,
+      })),
+    )
   } catch (error) {
     console.error("Error fetching campaigns:", error)
     return NextResponse.json({ error: "Failed to fetch campaigns" }, { status: 500 })
@@ -46,35 +49,36 @@ export async function POST(request: Request) {
     // Validate request body
     const validatedData = campaignSchema.parse(body)
 
-    // Get user data from Firestore
-    const userDoc = await adminFirestore.collection("users").doc(session.user.id).get()
+    // Get user data from MongoDB
+    if (!session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const user = await findOne("users", { _id: new ObjectId(session.user.id) })
 
-    if (!userDoc.exists) {
+    if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
-
-    const userData = userDoc.data()
 
     // Calculate deadline
     const deadline = Math.floor(Date.now() / 1000) + validatedData.duration * 24 * 60 * 60
 
-    // Create campaign in Firestore
+    // Create campaign in MongoDB
     const campaignData = {
       ...validatedData,
       userId: session.user.id,
-      userName: userData?.name || "Anonymous",
-      userImage: "image" in session.user ? session.user.image : "default-image-url",
+      userName: user.name || session.user.name,
+      userImage: user.image || session.user.image,
       status: "active",
       raised: 0,
       deadline,
       createdAt: new Date(),
     }
 
-    const campaignRef = await adminFirestore.collection("campaigns").add(campaignData)
+    const result = await insertOne("campaigns", campaignData as unknown as Document)
 
     return NextResponse.json(
       {
-        id: campaignRef.id,
+        id: result.insertedId.toString(),
         ...campaignData,
       },
       { status: 201 },
@@ -88,4 +92,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create campaign" }, { status: 500 })
   }
 }
-

@@ -25,7 +25,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
+  const callbackUrl = searchParams.get("callbackUrl") || "/ai-assistant"
   const { toast } = useToast()
 
   const {
@@ -42,7 +42,7 @@ export function LoginForm() {
     try {
       const result = await signIn("credentials", {
         redirect: false,
-        email: data.email,
+        email: data.email.toLowerCase(),
         password: data.password,
       })
 
@@ -112,4 +112,3 @@ export function LoginForm() {
     </form>
   )
 }
-

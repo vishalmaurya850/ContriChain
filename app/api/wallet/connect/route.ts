@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
-import { updateUserWallet } from "@/lib/user-service"
+import { updateOne, createObjectId } from "@/lib/mongodb-admin"
 import { z } from "zod"
-import { verifyMessage } from "ethers"
+import { ethers } from "ethers"
 
 // Schema for wallet connection
 const walletSchema = z.object({
@@ -20,20 +20,33 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (!session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const body = await request.json()
 
     // Validate request body
     const validatedData = walletSchema.parse(body)
 
     // Verify signature
-    const recoveredAddress = verifyMessage(validatedData.message, validatedData.signature)
+    const recoveredAddress = ethers.verifyMessage(validatedData.message, validatedData.signature)
 
     if (recoveredAddress.toLowerCase() !== validatedData.address.toLowerCase()) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
     }
 
     // Update user's wallet address
-    await updateUserWallet(session.user.id, validatedData.address)
+    await updateOne(
+      "users",
+      { _id: createObjectId(session.user.id) },
+      {
+        $set: {
+          walletAddress: validatedData.address,
+          updatedAt: new Date(),
+        },
+      },
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

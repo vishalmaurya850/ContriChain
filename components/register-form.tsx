@@ -10,9 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff } from "lucide-react"
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"
-import { auth, db } from "@/lib/firebase"
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 
 const registerSchema = z
   .object({
@@ -46,24 +43,23 @@ export function RegisterForm() {
     setIsLoading(true)
 
     try {
-      // Create user in Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
-
-      const user = userCredential.user
-
-      // Update user profile
-      await updateProfile(user, {
-        displayName: data.name,
+      // Register user via API
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email.toLowerCase(),
+          password: data.password,
+        }),
       })
 
-      // Create user document in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        name: data.name,
-        email: data.email,
-        createdAt: serverTimestamp(),
-        isAdmin: false,
-        walletAddress: null,
-      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Registration failed")
+      }
 
       toast({
         title: "Account created",
@@ -72,10 +68,10 @@ export function RegisterForm() {
 
       router.push("/login")
     } catch (error: unknown) {
-      // const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
       console.error("Registration error:", error)
 
-      if (error instanceof Error && "code" in error && error.code === "auth/email-already-in-use") {
+      if (errorMessage.includes("email already exists")) {
         toast({
           title: "Email already in use",
           description: "Please use a different email address or login",
@@ -149,4 +145,3 @@ export function RegisterForm() {
     </form>
   )
 }
-

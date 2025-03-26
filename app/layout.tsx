@@ -1,12 +1,14 @@
 import type React from "react"
-import { AuthProvider } from "@/lib/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
+import ClientSessionProvider from "@/components/session-provider"
 import type { Metadata } from "next"
+import { AuthProvider } from "@/components/auth-provider"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { FlagsmithProvider } from "@/lib/flagsmith"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,16 +25,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <FlagsmithProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
+            <ClientSessionProvider>
             <div className="flex min-h-screen flex-col">
               <Navbar />
               <div className="flex-1">{children}</div>
               <Footer />
             </div>
             <Toaster />
+            </ClientSessionProvider>
           </AuthProvider>
         </ThemeProvider>
+        </FlagsmithProvider>
       </body>
     </html>
   )

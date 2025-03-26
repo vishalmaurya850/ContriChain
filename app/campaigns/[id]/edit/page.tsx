@@ -13,7 +13,10 @@ interface EditCampaignPageProps {
 
 export async function generateMetadata({ params }: EditCampaignPageProps): Promise<Metadata> {
   const { id } = await params // Await the params to resolve the promise
-  const campaign = await getCampaignById(id) as { id: string; title?: string; userId: string; description: string; status: "active" | "paused" | "completed"; imageUrl?: string }
+  const rawCampaign = await getCampaignById(id)
+  const campaign = rawCampaign && 'userId' in rawCampaign && 'description' in rawCampaign && 'status' in rawCampaign
+    ? rawCampaign as { id: string; title?: string; userId: string; description: string; status: "active" | "paused" | "completed"; imageUrl?: string }
+    : null
 
   if (!campaign) {
     return {
@@ -35,14 +38,17 @@ export default async function EditCampaignPage({ params }: EditCampaignPageProps
     redirect(`/login?callbackUrl=/campaigns/${id}/edit`)
   }
 
-  const campaign = await getCampaignById(id) as { id: string; title?: string; userId: string; description: string; status: "active" | "paused" | "completed"; imageUrl?: string }
+  const rawCampaign = await getCampaignById(id)
+  const campaign = rawCampaign && 'userId' in rawCampaign && 'description' in rawCampaign && 'status' in rawCampaign
+    ? rawCampaign as { id: string; title?: string; userId: string; description: string; status: "active" | "paused" | "completed"; imageUrl?: string }
+    : null
 
   if (!campaign) {
     notFound()
   }
 
   // Check if user is the owner or an admin
-  if (campaign.userId !== session.user.id && !session.user.isAdmin) {
+  if (!session.user || (campaign.userId !== session.user.id && !session.user.isAdmin)) {
     redirect(`/campaigns/${id}`)
   }
 

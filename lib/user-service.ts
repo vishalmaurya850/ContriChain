@@ -1,19 +1,25 @@
-import clientPromise from "./mongodb"
-import { ObjectId } from "mongodb"
+import { findOne, updateOne, insertOne, createObjectId } from "@/lib/mongodb-admin"
 import type { User } from "./models/types"
 
 export async function getUserById(id: string): Promise<User | null> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
-    const user = await db.collection("users").findOne({ _id: new ObjectId(id) })
+    const user = await findOne("users", { _id: createObjectId(id) })
 
     if (!user) {
       return null
     }
 
-    return user as User
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      createdAt: user.createdAt,
+      image: user.image,
+      walletAddress: user.walletAddress,
+      _id: undefined,
+      password: undefined, // Don't return password
+    } as User
   } catch (error) {
     console.error("Error getting user:", error)
     throw error
@@ -22,16 +28,23 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
-    const user = await db.collection("users").findOne({ email })
+    const user = await findOne("users", { email: email.toLowerCase() })
 
     if (!user) {
       return null
     }
 
-    return user as User
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      createdAt: user.createdAt,
+      image: user.image,
+      walletAddress: user.walletAddress,
+      _id: undefined,
+      password: undefined, // Don't return password
+    } as User
   } catch (error) {
     console.error("Error getting user by email:", error)
     throw error
@@ -44,23 +57,20 @@ export async function createUser(data: {
   image?: string
 }): Promise<User> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
-    const user: User = {
+    const user = {
       name: data.name,
-      email: data.email,
+      email: data.email.toLowerCase(),
       image: data.image,
       isAdmin: false,
       createdAt: new Date(),
     }
 
-    const result = await db.collection("users").insertOne(user)
+    const result = await insertOne("users", user as unknown as Document)
 
     return {
+      id: result.insertedId.toString(),
       ...user,
-      _id: result.insertedId,
-    }
+    } as User
   } catch (error) {
     console.error("Error creating user:", error)
     throw error
@@ -69,18 +79,16 @@ export async function createUser(data: {
 
 export async function updateUserWallet(userId: string, walletAddress: string): Promise<boolean> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
-    const result = await db.collection("users").updateOne(
-      { _id: new ObjectId(userId) },
+    const result = await updateOne(
+      "users",
+      { _id: createObjectId(userId) },
       {
         $set: {
           walletAddress,
           updatedAt: new Date(),
         },
       },
-    )
+    ) as { modifiedCount: number }
 
     return result.modifiedCount === 1
   } catch (error) {
@@ -91,21 +99,19 @@ export async function updateUserWallet(userId: string, walletAddress: string): P
 
 export async function updateUserProfile(
   userId: string,
-  data: Partial<Omit<User, "_id" | "createdAt">>,
+  data: Partial<Omit<User, "id" | "createdAt">>,
 ): Promise<boolean> {
   try {
-    const client = await clientPromise
-    const db = client.db()
-
-    const result = await db.collection("users").updateOne(
-      { _id: new ObjectId(userId) },
+    const result = await updateOne(
+      "users",
+      { _id: createObjectId(userId) },
       {
         $set: {
           ...data,
           updatedAt: new Date(),
         },
       },
-    )
+    ) as { modifiedCount: number }
 
     return result.modifiedCount === 1
   } catch (error) {
@@ -113,3 +119,4 @@ export async function updateUserProfile(
     throw error
   }
 }
+

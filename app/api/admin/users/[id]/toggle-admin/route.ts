@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
-import { adminFirestore } from "@/lib/firebase-admin"
+import { updateOne, createObjectId } from "@/lib/mongodb-admin"
 import { z } from "zod"
 
 const toggleAdminSchema = z.object({
@@ -11,7 +11,7 @@ const toggleAdminSchema = z.object({
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
 
-  if (!session || !session.user.isAdmin) {
+  if (!session || !session.user || !session.user.isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -22,16 +22,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     // Await the params to resolve the promise
     const { id } = await context.params
 
-    // For development, return success if Firebase Admin is not properly initialized
-    if (!process.env.FIREBASE_ADMIN_CREDENTIALS) {
-      return NextResponse.json({ success: true })
-    }
-
-    // Update user in Firestore
-    await adminFirestore.collection("users").doc(id).update({
-      isAdmin,
-      updatedAt: new Date(),
-    })
+    // Update user in MongoDB
+    await updateOne(
+      "users",
+      { _id: createObjectId(id) },
+      {
+        $set: {
+          isAdmin,
+          updatedAt: new Date(),
+        },
+      },
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

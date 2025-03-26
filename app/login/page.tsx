@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/login-form"
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Suspense } from "react"
 
 export const metadata: Metadata = {
   title: "Login | CryptoFund",
@@ -15,7 +16,9 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold">Login</h1>
           <p className="text-muted-foreground">Enter your credentials to access your account</p>
         </div>
-        <LoginForm />
+        <Suspense fallback={<p>Loading login form...</p>}>
+          <LoginForm />
+        </Suspense>
         <div className="text-center text-sm">
           Don&apos;t have an account?{" "}
           <Link href="/register" className="underline">

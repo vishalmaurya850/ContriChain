@@ -1,20 +1,8 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-import { Session } from "next-auth"
-
-// Extend the Session type to include user.id
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string
-      isAdmin?: boolean
-      walletAddress?: string | null
-    }
-  }
-}
 import { authOptions } from "@/lib/auth-options"
 import { z } from "zod"
-import { adminFirestore } from "@/lib/firebase-admin"
+import { findOne, updateOne, deleteOne, createObjectId } from "@/lib/mongodb-admin"
 
 // Schema for campaign updates
 const updateCampaignSchema = z.object({
@@ -26,17 +14,19 @@ const updateCampaignSchema = z.object({
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await context.params // Await the params to resolve the promise
+    // Await the params to resolve the promise
+    const { id } = await context.params
 
-    const campaignDoc = await adminFirestore.collection("campaigns").doc(id).get()
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
 
-    if (!campaignDoc.exists) {
+    if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
     }
 
     return NextResponse.json({
-      id: campaignDoc.id,
-      ...campaignDoc.data(),
+      id: campaign._id.toString(),
+      ...campaign,
+      _id: undefined,
     })
   } catch (error) {
     console.error("Error fetching campaign:", error)
@@ -45,50 +35,51 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions) as Session & { user: { isAdmin?: boolean } }
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   try {
-    const { id } = await context.params // Await the params to resolve the promise
+    // Await the params to resolve the promise
+    const { id } = await context.params
 
-    // Get campaign to check ownership
-    const campaignDoc = await adminFirestore.collection("campaigns").doc(id).get()
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
 
-    if (!campaignDoc.exists) {
+    if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
     }
 
-    const campaignData = campaignDoc.data()
-
-    // Check if user is the owner or an admin
     const userIsAdmin = session.user?.isAdmin ?? false
-    if (!campaignData || (campaignData.userId !== session.user.id && !userIsAdmin)) {
+    if (!session.user || (campaign.userId !== session.user.id && !userIsAdmin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const body = await request.json()
-
-    // Validate request body
     const validatedData = updateCampaignSchema.parse(body)
 
-    // Update campaign in Firestore
-    await adminFirestore
-      .collection("campaigns")
-      .doc(id)
-      .update({
-        ...validatedData,
-        updatedAt: new Date(),
-      })
+    await updateOne(
+      "campaigns",
+      { _id: createObjectId(id) },
+      {
+        $set: {
+          ...validatedData,
+          updatedAt: new Date(),
+        },
+      },
+    )
 
-    // Get updated campaign
-    const updatedCampaignDoc = await adminFirestore.collection("campaigns").doc(id).get()
+    const updatedCampaign = await findOne("campaigns", { _id: createObjectId(id) })
+
+    if (!updatedCampaign) {
+      return NextResponse.json({ error: "Updated campaign not found" }, { status: 404 })
+    }
 
     return NextResponse.json({
-      id: updatedCampaignDoc.id,
-      ...updatedCampaignDoc.data(),
+      id: updatedCampaign._id.toString(),
+      ...updatedCampaign,
+      _id: undefined,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -108,25 +99,21 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   }
 
   try {
-    const { id } = await context.params // Await the params to resolve the promise
+    // Await the params to resolve the promise
+    const { id } = await context.params
 
-    // Get campaign to check ownership
-    const campaignDoc = await adminFirestore.collection("campaigns").doc(id).get()
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
 
-    if (!campaignDoc.exists) {
+    if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
     }
 
-    const campaignData = campaignDoc.data()
-
-    // Check if user is the owner or an admin
-    const userIsAdmin = session.user.isAdmin
-    if (!campaignData || (campaignData.userId !== session.user.id && !userIsAdmin)) {
+    const userIsAdmin = session.user?.isAdmin ?? false
+    if (!session.user || (campaign.userId !== session.user.id && !userIsAdmin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Delete campaign from Firestore
-    await adminFirestore.collection("campaigns").doc(id).delete()
+    await deleteOne("campaigns", { _id: createObjectId(id) })
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, LogOut } from "lucide-react"
+import { Menu, LogOut, FileText, BrainCircuit } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
 import { ConnectWalletButton } from "@/components/connect-wallet-button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface Session {
   user: {
@@ -25,14 +25,14 @@ interface Session {
     email?: string
     isAdmin?: boolean
     walletAddress?: string | null
+    image?: string | null
   }
 }
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
-  const { data: sessionData, status } = useSession()
-  const session = sessionData as Session
+  const { data: session, status } = useSession() as { data: Session | null; status: "loading" | "authenticated" | "unauthenticated" }
   const isLoading = status === "loading"
 
   // Close mobile menu when route changes
@@ -64,6 +64,14 @@ export function Navbar() {
                 >
                   Home
                 </Link>
+                {session && (
+                  <Link
+                    href="/ai-assistant"
+                    className={`text-sm font-medium ${pathname === "/ai-assistant" ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    AI Assistant
+                  </Link>
+                )}
                 <Link
                   href="/campaigns"
                   className={`text-sm font-medium ${pathname === "/campaigns" || pathname.startsWith("/campaigns/") ? "text-primary" : "text-muted-foreground"}`}
@@ -75,6 +83,12 @@ export function Navbar() {
                   className={`text-sm font-medium ${pathname === "/create" ? "text-primary" : "text-muted-foreground"}`}
                 >
                   Create Campaign
+                </Link>
+                <Link
+                  href="/whitepaper"
+                  className={`text-sm font-medium ${pathname === "/whitepaper" ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  White Paper
                 </Link>
                 {session ? (
                   <>
@@ -112,6 +126,15 @@ export function Navbar() {
           >
             Home
           </Link>
+          {session && (
+            <Link
+              href="/ai-assistant"
+              className={`text-sm font-medium flex items-center gap-1 ${pathname === "/ai-assistant" ? "text-primary" : "text-muted-foreground"} transition-colors hover:text-primary`}
+            >
+              <BrainCircuit className="h-4 w-4" />
+              AI Assistant
+            </Link>
+          )}
           <Link
             href="/campaigns"
             className={`text-sm font-medium ${pathname === "/campaigns" || pathname.startsWith("/campaigns/") ? "text-primary" : "text-muted-foreground"} transition-colors hover:text-primary`}
@@ -123,6 +146,13 @@ export function Navbar() {
             className={`text-sm font-medium ${pathname === "/create" ? "text-primary" : "text-muted-foreground"} transition-colors hover:text-primary`}
           >
             Create Campaign
+          </Link>
+          <Link
+            href="/whitepaper"
+            className={`text-sm font-medium flex items-center gap-1 ${pathname === "/whitepaper" ? "text-primary" : "text-muted-foreground"} transition-colors hover:text-primary`}
+          >
+            <FileText className="h-4 w-4" />
+            White Paper
           </Link>
         </nav>
 
@@ -141,6 +171,7 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
+                      <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
                       <AvatarFallback>
                         {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
                       </AvatarFallback>
@@ -157,6 +188,12 @@ export function Navbar() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/ai-assistant">
+                      <BrainCircuit className="mr-2 h-4 w-4" />
+                      AI Assistant
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>
@@ -197,4 +234,3 @@ export function Navbar() {
     </header>
   )
 }
-

@@ -18,7 +18,9 @@ export default function CampaignsPage() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
         <div className="lg:col-span-1">
-          <CampaignFilters />
+          <Suspense fallback={<p>Loading filters...</p>}>
+            <CampaignFilters />
+          </Suspense>
         </div>
         <div className="lg:col-span-3">
           <Suspense fallback={<CampaignGridSkeleton />}>
