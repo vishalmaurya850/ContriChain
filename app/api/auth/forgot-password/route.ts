@@ -3,6 +3,7 @@ import { z } from "zod"
 import { findOne } from "@/lib/mongodb-admin"
 import { randomBytes } from "crypto"
 import { updateOne } from "@/lib/mongodb-admin"
+import { sendPasswordResetEmail } from "@/lib/email-service"
 
 // Schema for password reset request
 const forgotPasswordSchema = z.object({
@@ -38,11 +39,13 @@ export async function POST(request: Request) {
       },
     )
 
-    // In a real application, you would send an email with the reset link
-    // For this example, we'll just return success
-    // The reset link would be something like: /reset-password?token=${resetToken}
+    // Get the base URL for the reset link
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http"
+    const host = request.headers.get("host") || "localhost:3000"
+    const baseUrl = `${protocol}://${host}`
 
-    console.log(`Reset token for ${email}: ${resetToken}`)
+    // Send the reset email
+    await sendPasswordResetEmail(email, resetToken, baseUrl)
 
     return NextResponse.json({ success: true })
   } catch (error) {

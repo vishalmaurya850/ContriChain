@@ -1,8 +1,7 @@
-import type { NextAuthOptions} from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import { compare } from "bcryptjs"
-import clientPromise from "./mongodb"
+import type { NextAuthOptions, User } from "next-auth"
+import type { JWT } from "next-auth/jwt"
 
+// Extend the User type to include isAdmin
 declare module "next-auth" {
   interface User {
     isAdmin?: boolean
@@ -10,9 +9,12 @@ declare module "next-auth" {
   }
 
   interface Session {
-    user: User | undefined
+    user: User
   }
 }
+import CredentialsProvider from "next-auth/providers/credentials"
+import { compare } from "bcryptjs"
+import clientPromise from "./mongodb"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -65,17 +67,17 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: {
-    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
   pages: {
     signIn: "/login",
     error: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: User }): Promise<JWT> {
       if (user) {
         token.id = user.id
-        token.isAdmin = user.isAdmin
+        token.isAdmin = user.isAdmin || false
         token.walletAddress = user.walletAddress
       }
       return token
@@ -89,4 +91,7 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 }
+

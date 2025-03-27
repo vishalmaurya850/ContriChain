@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { Eye, EyeOff } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -23,9 +24,10 @@ type LoginFormValues = z.infer<typeof loginSchema>
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/ai-assistant"
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
   const { toast } = useToast()
 
   const {
@@ -38,6 +40,7 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true)
+    setError(null)
 
     try {
       const result = await signIn("credentials", {
@@ -47,23 +50,20 @@ export function LoginForm() {
       })
 
       if (result?.error) {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password. Please try again.",
-          variant: "destructive",
-        })
+        setError("Invalid email or password. Please try again.")
         return
       }
+
+      toast({
+        title: "Login successful",
+        description: "You have been logged in successfully",
+      })
 
       router.push(callbackUrl)
       router.refresh()
     } catch (error) {
       console.error("Login error:", error)
-      toast({
-        title: "Something went wrong",
-        description: "Please try again later",
-        variant: "destructive",
-      })
+      setError("Something went wrong. Please try again later.")
     } finally {
       setIsLoading(false)
     }
@@ -71,6 +71,12 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" type="email" placeholder="you@example.com" {...register("email")} disabled={isLoading} />
