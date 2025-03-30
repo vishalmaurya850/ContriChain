@@ -50,6 +50,7 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "ethers": "^6.13.5",
+    "finnhub": "^1.2.19",
     "firebase": "^11.5.0",
     "firebase-admin": "^13.2.0",
     "flagsmith": "^9.0.5",

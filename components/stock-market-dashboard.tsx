@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,10 @@ interface StockData {
   price: number
   change: number
   changePercent: number
+  high: number
+  low: number
+  open: number
+  prevClose: number
   prediction?: {
     direction: "up" | "down" | "neutral"
     confidence: number
@@ -29,8 +33,12 @@ export function StockMarketDashboard() {
   const [stocks, setStocks] = useState<StockData[]>([])
   const { toast } = useToast()
 
- // Memoize fetchDefaultStocks to avoid re-creating it on every render
- const fetchDefaultStocks = useCallback(async () => {
+  // Load initial stock data
+  useEffect(() => {
+    fetchDefaultStocks()
+  }, [])
+
+  const fetchDefaultStocks = async () => {
     setIsLoading(true)
     try {
       const response = await fetch("/api/stocks/trending")
@@ -49,12 +57,7 @@ export function StockMarketDashboard() {
     } finally {
       setIsLoading(false)
     }
-  }, [toast])
-
-  // Load initial stock data
-  useEffect(() => {
-    fetchDefaultStocks()
-  }, [fetchDefaultStocks])
+  }
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -159,6 +162,11 @@ export function StockMarketDashboard() {
                       </div>
                     )}
                   </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground grid grid-cols-3 gap-2">
+                  <div>Open: ${stock.open.toFixed(2)}</div>
+                  <div>High: ${stock.high.toFixed(2)}</div>
+                  <div>Low: ${stock.low.toFixed(2)}</div>
                 </div>
               </div>
             ))

@@ -1,5 +1,4 @@
-import type { NextAuthOptions, User } from "next-auth"
-import type { JWT } from "next-auth/jwt"
+import type { NextAuthOptions } from "next-auth"
 
 // Extend the User type to include isAdmin
 declare module "next-auth" {
@@ -9,7 +8,7 @@ declare module "next-auth" {
   }
 
   interface Session {
-    user: User
+    user?: User
   }
 }
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -67,17 +66,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: {
-    maxAge: 30 * 24 * 60 * 60 // 30 days
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/login",
     error: "/login",
   },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: User }): Promise<JWT> {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.isAdmin = user.isAdmin || false
+        token.isAdmin = user.isAdmin
         token.walletAddress = user.walletAddress
       }
       return token
