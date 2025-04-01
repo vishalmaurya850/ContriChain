@@ -33,6 +33,11 @@ export async function getAdminStats(): Promise<{
     const totalUsers = await countDocuments("users")
 
     // Get total funds raised
+    interface CampaignAggregateResult {
+      _id: null
+      totalRaised: number
+    }
+
     const campaignsAggregate = await aggregate("campaigns", [
       {
         $group: {
@@ -40,7 +45,7 @@ export async function getAdminStats(): Promise<{
           totalRaised: { $sum: "$raised" },
         },
       },
-    ])
+    ]) as unknown as CampaignAggregateResult[]
 
     const totalFundsRaised = campaignsAggregate.length > 0 ? campaignsAggregate[0].totalRaised : 0
 

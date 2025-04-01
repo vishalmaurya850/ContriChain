@@ -4,7 +4,11 @@ import { authOptions } from "@/lib/auth-options"
 import { z } from "zod"
 import { findOne, insertOne, updateOne, createObjectId } from "@/lib/mongodb-admin"
 import { ObjectId } from "mongodb"
-import type { CustomDocument } from "@/lib/mongodb-admin"
+// Define CustomDocument locally as it is not exported from "@/lib/mongodb-admin"
+interface CustomDocument {
+  _id: ObjectId
+  [key: string]: any
+}
 
 // Extend CustomDocument type to include 'type' property
 interface TransactionDocument extends CustomDocument {
@@ -73,7 +77,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const contributionResult = await insertOne("contributions", contributionData as unknown as Document)
 
     // Update campaign raised amount
-    await updateOne<{ _id: ObjectId; raised: number }>(
+    await updateOne(
       "campaigns",
       { _id: createObjectId(id) },
       {

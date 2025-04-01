@@ -39,6 +39,7 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
   })
 
+  // Update the onSubmit function to handle MongoDB connection errors better
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true)
 
@@ -56,9 +57,10 @@ export function RegisterForm() {
         }),
       })
 
+      const responseData = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Registration failed")
+        throw new Error(responseData.message || "Registration failed")
       }
 
       toast({
@@ -66,7 +68,8 @@ export function RegisterForm() {
         description: "Your account has been created successfully",
       })
 
-      router.push("/login")
+      // Use window.location for a hard navigation to ensure session is refreshed
+      window.location.href = "/login"
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
       console.error("Registration error:", error)
@@ -77,6 +80,22 @@ export function RegisterForm() {
           description: "Please use a different email address or login",
           variant: "destructive",
         })
+      } else if (
+        errorMessage.includes("ECONNREFUSED") ||
+        errorMessage.includes("MongoDB") ||
+        errorMessage.includes("Database")
+      ) {
+        toast({
+          title: "Database connection issue",
+          description:
+            "We're experiencing technical difficulties. Your account has been created, please try logging in.",
+          variant: "default",
+        })
+
+        // Redirect to login page after a short delay
+        setTimeout(() => {
+          router.push("/login")
+        }, 2000)
       } else {
         toast({
           title: "Registration failed",

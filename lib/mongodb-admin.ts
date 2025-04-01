@@ -1,88 +1,98 @@
-import { MongoClient, ObjectId, ServerApiVersion } from "mongodb"
-
-if (!process.env.MONGODB_URI) {
-  throw new Error("Please add your MongoDB URI to .env.local")
-}
-
-const uri = process.env.MONGODB_URI
-const options = {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-}
-
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
-
-if (process.env.NODE_ENV === "development") {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  const globalWithMongo = global as typeof global & {
-    _mongoClientPromise?: Promise<MongoClient>
-  }
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options)
-    globalWithMongo._mongoClientPromise = client.connect()
-  }
-  clientPromise = globalWithMongo._mongoClientPromise
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options)
-  clientPromise = client.connect()
-}
-
-export default clientPromise
-
-export interface CustomDocument {
-    _id: ObjectId
-    [key: string]: unknown // Allow additional properties
-  }
+import clientPromise from "./mongodb"
+import { ObjectId, AggregationCursor } from "mongodb"
 
 // Helper functions for common database operations
 export async function getCollection(collectionName: string) {
-  const client = await clientPromise
-  const db = client.db()
-  return db.collection(collectionName)
+  try {
+    const client = await clientPromise
+    if (!client) {
+      throw new Error("Database client is undefined");
+    }
+    const db = client.db()
+    return db.collection(collectionName)
+  } catch (error) {
+    console.error(`Error getting collection ${collectionName}:`, error)
+    throw new Error(`Database connection error: ${error instanceof Error ? error.message : "Unknown error"}`)
+  }
 }
 
-export async function findOne<T>(collectionName: string, query: Partial<T>) {
-  const collection = await getCollection(collectionName)
-  return collection.findOne(query)
+export async function findOne(collectionName: string, query: any) {
+  try {
+    const collection = await getCollection(collectionName)
+    return collection.findOne(query)
+  } catch (error) {
+    console.error(`Error finding document in ${collectionName}:`, error)
+    throw error
+  }
 }
 
-export async function findMany<T>(collectionName: string, query: Partial<T> = {}, options: Record<string, unknown> = {}) {
-  const collection = await getCollection(collectionName)
-  return collection.find(query, options).toArray()
+export async function findMany(collectionName: string, query: any = {}, options: any = {}) {
+  try {
+    const collection = await getCollection(collectionName)
+    return collection.find(query, options).toArray()
+  } catch (error) {
+    console.error(`Error finding documents in ${collectionName}:`, error)
+    throw error
+  }
 }
 
-export async function insertOne<T extends Document>(collectionName: string, document: T) {
-  const collection = await getCollection(collectionName)
-  return collection.insertOne(document)
+export async function insertOne(collectionName: string, document: any) {
+  try {
+    const collection = await getCollection(collectionName)
+    return collection.insertOne(document)
+  } catch (error) {
+    console.error(`Error inserting document into ${collectionName}:`, error)
+    throw error
+  }
 }
 
-export async function updateOne<T>(collectionName: string, filter: Partial<T>, update: Record<string, unknown>): Promise<unknown> {
-  const collection = await getCollection(collectionName)
-  return collection.updateOne(filter, update)
+export async function updateOne(collectionName: string, filter: any, update: any) {
+  try {
+    const collection = await getCollection(collectionName)
+    return collection.updateOne(filter, update)
+  } catch (error) {
+    console.error(`Error updating document in ${collectionName}:`, error)
+    throw error
+  }
 }
 
-export async function deleteOne<T>(collectionName: string, filter: Partial<T>) {
-  const collection = await getCollection(collectionName)
-  return collection.deleteOne(filter)
+export async function deleteOne(collectionName: string, filter: any) {
+  try {
+    const collection = await getCollection(collectionName)
+    return collection.deleteOne(filter)
+  } catch (error) {
+    console.error(`Error deleting document from ${collectionName}:`, error)
+    throw error
+  }
 }
 
-export async function countDocuments<T>(collectionName: string, filter: Partial<T> = {}) {
-  const collection = await getCollection(collectionName)
-  return collection.countDocuments(filter)
+export async function countDocuments(collectionName: string, filter: any = {}) {
+  try {
+    const collection = await getCollection(collectionName)
+    return collection.countDocuments(filter)
+  } catch (error) {
+    console.error(`Error counting documents in ${collectionName}:`, error)
+    throw error
+  }
 }
 
-export async function aggregate(collectionName: string, pipeline: Record<string, unknown>[]) {
-  const collection = await getCollection(collectionName)
-  return collection.aggregate(pipeline).toArray()
+export async function aggregate(collectionName: string, pipeline: any[]) {
+  try {
+    const collection = await getCollection(collectionName)
+    const cursor = await collection.aggregate(pipeline) as AggregationCursor<Document>
+    return cursor.toArray()
+  } catch (error) {
+    console.error(`Error aggregating documents in ${collectionName}:`, error)
+    throw error
+  }
 }
 
 export function createObjectId(id: string) {
-  return new ObjectId(id)
+  try {
+    return new ObjectId(id)
+  } catch (error) {
+    console.error(`Error creating ObjectId:`, error)
+    throw error
+  }
 }
+

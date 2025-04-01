@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
@@ -25,7 +25,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+  // const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
   const { toast } = useToast()
@@ -43,6 +43,7 @@ export function LoginForm() {
     setError(null)
 
     try {
+
       const result = await signIn("credentials", {
         redirect: false,
         email: data.email.toLowerCase(),
@@ -59,8 +60,8 @@ export function LoginForm() {
         description: "You have been logged in successfully",
       })
 
-      router.push(callbackUrl)
-      router.refresh()
+      // Force a hard navigation to ensure the session is refreshed
+      window.location.href = callbackUrl
     } catch (error) {
       console.error("Login error:", error)
       setError("Something went wrong. Please try again later.")

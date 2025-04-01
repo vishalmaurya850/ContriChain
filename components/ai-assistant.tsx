@@ -106,11 +106,11 @@ export function AIAssistant() {
           </div>
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="funding" className="flex items-center gap-1">
+          <TabsList className="grid w-full">
+            {/* <TabsTrigger value="funding" className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
               Funding Advice
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="stocks" className="flex items-center gap-1">
               <LineChart className="h-4 w-4" />
               Stock Predictions

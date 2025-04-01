@@ -28,7 +28,7 @@ export async function GET() {
           totalRaised: { $sum: "$raised" },
         },
       },
-    ])
+    ]) as unknown as { _id: null; totalRaised: number }[]
 
     const totalFundsRaised = campaignsAggregate.length > 0 ? campaignsAggregate[0].totalRaised : 0
 
