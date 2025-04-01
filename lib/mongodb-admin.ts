@@ -1,4 +1,5 @@
 import clientPromise from "./mongodb"
+import { Document, InsertOneResult } from "mongodb";
 import { ObjectId, AggregationCursor } from "mongodb"
 
 // Helper functions for common database operations
@@ -16,7 +17,7 @@ export async function getCollection(collectionName: string) {
   }
 }
 
-export async function findOne(collectionName: string, query: any) {
+export async function findOne<T>(collectionName: string, query: Partial<T>) {
   try {
     const collection = await getCollection(collectionName)
     return collection.findOne(query)
@@ -26,7 +27,7 @@ export async function findOne(collectionName: string, query: any) {
   }
 }
 
-export async function findMany(collectionName: string, query: any = {}, options: any = {}) {
+export async function findMany<T>(collectionName: string, query: Partial<T> = {}, options: Record<string, unknown> = {}) {
   try {
     const collection = await getCollection(collectionName)
     return collection.find(query, options).toArray()
@@ -36,7 +37,7 @@ export async function findMany(collectionName: string, query: any = {}, options:
   }
 }
 
-export async function insertOne(collectionName: string, document: any) {
+export async function insertOne<T extends Document>(collectionName: string, document: T,): Promise<InsertOneResult<T>> {
   try {
     const collection = await getCollection(collectionName)
     return collection.insertOne(document)
@@ -46,7 +47,7 @@ export async function insertOne(collectionName: string, document: any) {
   }
 }
 
-export async function updateOne(collectionName: string, filter: any, update: any) {
+export async function updateOne<T>(collectionName: string, filter: Partial<T>, update: Partial<T> | Record<string, unknown>) {
   try {
     const collection = await getCollection(collectionName)
     return collection.updateOne(filter, update)
@@ -56,7 +57,7 @@ export async function updateOne(collectionName: string, filter: any, update: any
   }
 }
 
-export async function deleteOne(collectionName: string, filter: any) {
+export async function deleteOne<T>(collectionName: string, filter: Partial<T>) {
   try {
     const collection = await getCollection(collectionName)
     return collection.deleteOne(filter)
@@ -66,7 +67,7 @@ export async function deleteOne(collectionName: string, filter: any) {
   }
 }
 
-export async function countDocuments(collectionName: string, filter: any = {}) {
+export async function countDocuments<T>(collectionName: string, filter: Partial<T> = {}) {
   try {
     const collection = await getCollection(collectionName)
     return collection.countDocuments(filter)
@@ -76,7 +77,7 @@ export async function countDocuments(collectionName: string, filter: any = {}) {
   }
 }
 
-export async function aggregate(collectionName: string, pipeline: any[]) {
+export async function aggregate(collectionName: string, pipeline: Record<string, unknown>[]) {
   try {
     const collection = await getCollection(collectionName)
     const cursor = await collection.aggregate(pipeline) as AggregationCursor<Document>

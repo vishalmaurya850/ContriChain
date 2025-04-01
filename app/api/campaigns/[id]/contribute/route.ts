@@ -1,68 +1,67 @@
-import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth-options"
-import { z } from "zod"
-import { findOne, insertOne, updateOne, createObjectId } from "@/lib/mongodb-admin"
-import { ObjectId } from "mongodb"
-// Define CustomDocument locally as it is not exported from "@/lib/mongodb-admin"
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth-options";
+import { z } from "zod";
+import { findOne, insertOne, updateOne, createObjectId } from "@/lib/mongodb-admin";
+import { ObjectId } from "mongodb";
+
+interface Campaign {
+  _id: ObjectId;
+  title: string;
+  raised: number; // Ensure this matches your database schema
+}
+
 interface CustomDocument {
-  _id: ObjectId
-  [key: string]: any
+  _id: ObjectId;
+  [key: string]: unknown;
 }
 
-// Extend CustomDocument type to include 'type' property
 interface TransactionDocument extends CustomDocument {
-  type: string
-  campaignId: string
-  campaignTitle: string
-  userId: string
-  userName: string
-  amount: number
-  transactionHash: string
-  timestamp: Date
-  status: string
+  type: string;
+  campaignId: string;
+  campaignTitle: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  transactionHash: string;
+  timestamp: Date;
+  status: string;
 }
 
-// Schema for contribution
 const contributionSchema = z.object({
   amount: z.number().positive(),
   transactionHash: z.string(),
-})
+});
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions);
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // Await the params to resolve the promise
-    const { id } = await context.params
+    const { id } = await context.params;
 
-    // Check if campaign exists
-    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
+    const campaign = await findOne<Campaign>("campaigns", { _id: createObjectId(id) });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    const body = await request.json()
+    const body = await request.json();
+    const validatedData = contributionSchema.parse(body);
 
-    // Validate request body
-    const validatedData = contributionSchema.parse(body)
-
-    // Get user data
     if (!session.user) {
-      return NextResponse.json({ error: "User session is invalid" }, { status: 400 })
+      return NextResponse.json({ error: "User session is invalid" }, { status: 400 });
     }
-    const user = await findOne("users", { _id: createObjectId(session.user.id) })
+
+    const user = await findOne("users", { _id: createObjectId(session.user.id) });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Create contribution in MongoDB
     const contributionData = {
       campaignId: id,
       campaignTitle: campaign.title,
@@ -72,23 +71,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       amount: validatedData.amount,
       transactionHash: validatedData.transactionHash,
       timestamp: new Date(),
-    }
+    };
 
-    const contributionResult = await insertOne("contributions", contributionData as unknown as Document)
+    const contributionResult = await insertOne("contributions", contributionData as unknown as Document);
 
-    // Update campaign raised amount
-    await updateOne(
+    await updateOne<Campaign>(
       "campaigns",
       { _id: createObjectId(id) },
-      {
-        $set: {
-          raised: campaign.raised + validatedData.amount,
-        },
-      },
-    )
+      { $set: { raised: campaign.raised + validatedData.amount } } as unknown as Partial<Campaign>,
+    );
 
     const transactionData: TransactionDocument = {
-      _id: new ObjectId(), // Generate a new ObjectId for the transaction
+      _id: new ObjectId(),
       type: "contribution",
       campaignId: id,
       campaignTitle: campaign.title,
@@ -98,9 +92,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       transactionHash: validatedData.transactionHash,
       timestamp: new Date(),
       status: "confirmed",
-    }
+    };
 
-    await insertOne("transactions", transactionData as unknown as Document)
+    await insertOne("transactions", transactionData as unknown as Document);
 
     return NextResponse.json(
       {
@@ -108,13 +102,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         ...contributionData,
       },
       { status: 201 },
-    )
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 });
     }
 
-    console.error("Error processing contribution:", error)
-    return NextResponse.json({ error: "Failed to process contribution" }, { status: 500 })
+    console.error("Error processing contribution:", error);
+    return NextResponse.json({ error: "Failed to process contribution" }, { status: 500 });
   }
 }

@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import { hash } from "bcryptjs"
 import { z } from "zod"
 
+import { Document } from "mongodb";
+
+
 // Schema for user registration
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -45,7 +48,15 @@ export async function POST(request: Request) {
         const hashedPassword = await hash(password, 12)
 
         // Create user
-        const userData = {
+        interface UserDocument extends Omit<Document, "_id"> {
+          name: string;
+          email: string;
+          password: string;
+          isAdmin: boolean;
+          createdAt: Date;
+        }
+
+        const userData: UserDocument = {
           name,
           email: email.toLowerCase(),
           password: hashedPassword,
