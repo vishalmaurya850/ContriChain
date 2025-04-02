@@ -24,7 +24,7 @@ export default async function ProfilePage() {
           <p className="text-muted-foreground">Manage your account information and preferences</p>
         </div>
 
-        {session.user && <ProfileForm user={session.user} />}
+        <ProfileForm user={session.user} />
       </div>
     </main>
   )

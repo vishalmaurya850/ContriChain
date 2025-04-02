@@ -21,14 +21,9 @@ export default async function AdminPage() {
     redirect("/login?callbackUrl=/admin")
   }
 
-  if (!session.user) {
-    redirect("/login?callbackUrl=/admin")
-  }
+  const isUserAdmin = await isAdmin(session.user.id)
 
-  const userId = (session.user as { id: string }).id
-  const userIsAdmin = await isAdmin(userId)
-
-  if (!userIsAdmin) {
+  if (!isUserAdmin) {
     redirect("/dashboard")
   }
 

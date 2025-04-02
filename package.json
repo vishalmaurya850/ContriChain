@@ -44,6 +44,7 @@
     "autoprefixer": "^10.4.20",
     "aws4": "^1.13.2",
     "bcryptjs": "^3.0.2",
+    "bson": "^6.10.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",

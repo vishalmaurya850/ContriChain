@@ -16,25 +16,11 @@ export function AdminTransactionList() {
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [filter, setFilter] = useState<string>("")
 
-  const { transactions, totalPages, isLoading } = useAdminTransactions({
+  const { transactions = [], totalPages = 1, isLoading }: { transactions: Array<{ id: string; type: string; campaignId?: string; campaignTitle?: string; userName?: string; transactionHash?: string; amount: number; status: string; timestamp: string }>; totalPages: number; isLoading: boolean } = useAdminTransactions({
     page,
     limit: 10,
     status: statusFilter || undefined,
-  }) as {
-    transactions: {
-      id: string
-      type: string
-      campaignId: string
-      campaignTitle: string
-      userName: string
-      amount: number
-      status: string
-      timestamp: string
-      transactionHash: string
-    }[]
-    totalPages: number
-    isLoading: boolean
-  }
+  })
 
   const filteredTransactions = transactions.filter((transaction) => {
     if (!filter) return true

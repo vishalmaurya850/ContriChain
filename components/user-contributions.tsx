@@ -11,7 +11,7 @@ import { useUserContributions } from "@/lib/contribution-service"
 interface Contribution {
   id: string
   campaignId: string
-  campaignTitle: string
+  campaignTitle?: string
   amount: number
   timestamp: string
   transactionHash: string
@@ -46,7 +46,9 @@ export function UserContributions() {
       <Card className="text-center p-6">
         <CardTitle className="mb-2">No Contributions Yet</CardTitle>
         <p className="text-muted-foreground mb-4">You haven&apos;t contributed to any campaigns yet.</p>
-        <Button>Browse Campaigns</Button>
+        <Link href="/campaigns">
+          <Button>Browse Campaigns</Button>
+        </Link>
       </Card>
     )
   }
@@ -54,34 +56,33 @@ export function UserContributions() {
   return (
     <div className="space-y-4">
       {contributions.map((contribution: Contribution) => (
-      <Card key={contribution.id}>
-        <CardHeader>
-        <div className="flex justify-between items-center">
-          <Link href={`/campaigns/${contribution.campaignId}`} className="hover:underline">
-          <CardTitle className="text-lg">{contribution.campaignTitle || "Campaign"}</CardTitle>
-          </Link>
-          <span className="text-lg font-bold">{contribution.amount} ETH</span>
-        </div>
-        </CardHeader>
-        <CardContent>
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
-          {new Date(contribution.timestamp).toLocaleDateString()} at{" "}
-          {new Date(contribution.timestamp).toLocaleTimeString()}
-          </div>
-          <a
-          href={`https://etherscan.io/tx/${contribution.transactionHash}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-          View transaction <ExternalLink className="ml-1 h-3 w-3" />
-          </a>
-        </div>
-        </CardContent>
-      </Card>
+        <Card key={contribution.id}>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <Link href={`/campaigns/${contribution.campaignId}`} className="hover:underline">
+                <CardTitle className="text-lg">{contribution.campaignTitle || "Campaign"}</CardTitle>
+              </Link>
+              <span className="text-lg font-bold">{contribution.amount} ETH</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                {new Date(contribution.timestamp).toLocaleDateString()} at{" "}
+                {new Date(contribution.timestamp).toLocaleTimeString()}
+              </div>
+              <a
+                href={`https://etherscan.io/tx/${contribution.transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                View transaction <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   )
 }
-

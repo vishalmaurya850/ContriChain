@@ -81,4 +81,3 @@ export async function toggleUserAdmin(userId: string, isAdmin: boolean): Promise
 
   return true
 }
-

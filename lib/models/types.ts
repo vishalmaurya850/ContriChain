@@ -65,3 +65,20 @@ export interface Transaction {
   timestamp: Date
   status: "pending" | "confirmed" | "failed"
 }
+
+export interface ChatMessage {
+  _id?: ObjectId
+  role: "user" | "assistant"
+  content: string
+  timestamp: Date
+}
+
+export interface ChatSession {
+  _id?: ObjectId
+  userId: string
+  title: string
+  messages: ChatMessage[]
+  createdAt: Date
+  updatedAt: Date
+  category: "stocks"
+}

@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-// import type { DefaultSession } from "next-auth"
 import { authOptions } from "@/lib/auth-options"
-
-// Removed Session extension as `id` is now part of the User interface
 import { z } from "zod"
 
 // Schema for profile update
@@ -22,10 +19,6 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json()
     const { name, image } = profileSchema.parse(body)
-
-    if (!session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
 
     // For development with mock DB, return success
     if (process.env.NODE_ENV === "development" && (process.env.USE_MOCK_DB === "true" || !process.env.MONGODB_URI)) {

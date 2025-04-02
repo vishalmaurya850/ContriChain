@@ -6,13 +6,16 @@ import { findMany } from "@/lib/mongodb-admin"
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
 
+  // Await the params to resolve the Promise
+  const { id } = await context.params
+
   // Allow users to view their own contributions or admins to view any user's contributions
-  if (!session || !session.user || (session.user.id !== (await context.params).id && !session.user.isAdmin)) {
+  if (!session || (session.user.id !== id && !session.user.isAdmin)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   try {
-    const contributions = await findMany("contributions", { userId: (await context.params).id })
+    const contributions = await findMany("contributions", { userId: id })
 
     return NextResponse.json(
       contributions.map((contribution) => ({
@@ -26,4 +29,3 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "Failed to fetch user contributions" }, { status: 500 })
   }
 }
-

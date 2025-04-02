@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Wallet } from "lucide-react"
-// import { ethers } from "ethers"
 import { Web3Provider } from "@ethersproject/providers"
 import { useSession } from "next-auth/react"
 
@@ -35,6 +34,7 @@ export function ConnectWalletButton() {
       const message = `Connect wallet to CryptoFund: ${Date.now()}`
 
       const provider = new Web3Provider(window.ethereum)
+      // const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       const signature = await signer.signMessage(message)
 
@@ -105,4 +105,3 @@ export function ConnectWalletButton() {
     </div>
   )
 }
-

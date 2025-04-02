@@ -1,28 +1,7 @@
-import type { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
-import clientPromise from "./mongodb";
-
-declare module "next-auth" {
-  interface User {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    isAdmin?: boolean;
-    walletAddress?: string | null;
-  }
-
-  interface Session {
-    user?: User;
-  }
-
-  interface JWT {
-    id: string;
-    isAdmin?: boolean;
-    walletAddress?: string | null;
-  }
-}
+import type { NextAuthOptions } from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+import { compare } from "bcryptjs"
+import clientPromise from "./mongodb"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -34,33 +13,29 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          return null
         }
 
         try {
-          const client = await clientPromise;
-          if (!client) {
-            console.error("Database client is undefined");
-            return null;
-          }
-          const db = client.db();
+          const client = await clientPromise
+          const db = client.db("cryptofund_db")
 
           // Find user by email
           const user = await db.collection("users").findOne({
             email: credentials.email.toLowerCase(),
-          });
+          })
 
           if (!user) {
-            console.error("User not found");
-            return null;
+            console.error("User not found")
+            return null
           }
 
           // Verify password
-          const isPasswordValid = await compare(credentials.password, user.password);
+          const isPasswordValid = await compare(credentials.password, user.password)
 
           if (!isPasswordValid) {
-            console.error("Invalid password");
-            return null;
+            console.error("Invalid password")
+            return null
           }
 
           return {
@@ -70,10 +45,10 @@ export const authOptions: NextAuthOptions = {
             image: user.image,
             isAdmin: user.isAdmin || false,
             walletAddress: user.walletAddress || null,
-          };
+          }
         } catch (error) {
-          console.error("Authentication error:", error);
-          return null;
+          console.error("Authentication error:", error)
+          return null
         }
       },
     }),
@@ -89,21 +64,21 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.isAdmin = user.isAdmin;
-        token.walletAddress = user.walletAddress;
+        token.id = user.id
+        token.isAdmin = user.isAdmin
+        token.walletAddress = user.walletAddress
       }
-      return token;
+      return token
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.isAdmin = token.isAdmin as boolean;
-        session.user.walletAddress = token.walletAddress as string | null;
+        session.user.id = token.id as string
+        session.user.isAdmin = token.isAdmin as boolean
+        session.user.walletAddress = token.walletAddress as string | null
       }
-      return session;
+      return session
     },
   },
   secret: process.env.NEXTAUTH_SECRET || "development-secret",
   debug: process.env.NODE_ENV === "development",
-};
+}

@@ -122,41 +122,47 @@ export async function deleteCampaign(id: string) {
   return true
 }
 
-export async function getAllCampaigns(filters: { category?: string; status?: string }) {
-  const response = await fetch("/api/campaigns", {
-    method: "POST",
-    body: JSON.stringify(filters),
-  })
-  const campaigns = await response.json()
-
-  type Campaign = {
-    id: string
-    title: string
-    description: string
-    goal: number
-    raised: number
-    status: string
-    category: string
-    imageUrl?: string
-    deadline: string
-    userName: string
+export async function getAllCampaigns(options?: {
+  category?: string
+  status?: string
+}): Promise<Campaign[]> {
+  let queryString = ""
+  if (options?.category) {
+    queryString += `${queryString ? "&" : "?"}category=${options.category}`
+  }
+  if (options?.status) {
+    queryString += `${queryString ? "&" : "?"}status=${options.status}`
   }
 
-  return campaigns.map((campaign: Campaign) => ({
-    id: campaign.id,
-    title: campaign.title,
-    description: campaign.description,
-    goal: campaign.goal,
-    raised: campaign.raised, // Ensure this is included
-    status: campaign.status,
-    category: campaign.category,
-    imageUrl: campaign.imageUrl,
-    deadline: campaign.deadline,
-    userName: campaign.userName,
-  }))
+  const response = await fetch(`/api/campaigns${queryString}`)
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch campaigns")
+  }
+
+  return response.json()
 }
 
-export async function getCampaignById(id: string): Promise<{ id: string; title: string; description: string; goal: number; status: string; category: string; imageUrl?: string; raised: number; deadline: string; userId: string; userName: string; createdAt: string; onChainId: string; transactionHash: string; }> {
+// Define or import the Campaign type
+export type Campaign = {
+  id: string
+  title: string
+  description: string
+  goal: number
+  raised: number
+  duration: number
+  deadline: number
+  category: string
+  userId?: string // Added userId property
+  userName?: string // Optional: Add userName if needed
+  createdAt?: string
+  imageUrl?: string
+  onChainId: string
+  transactionHash: string
+  status: "active" | "paused" | "completed"
+}
+
+export async function getCampaignById(id: string): Promise<Campaign> {
   const response = await fetch(`/api/campaigns/${id}`)
 
   if (!response.ok) {
@@ -165,4 +171,3 @@ export async function getCampaignById(id: string): Promise<{ id: string; title: 
 
   return response.json()
 }
-

@@ -6,7 +6,7 @@ import { countDocuments, aggregate } from "@/lib/mongodb-admin"
 export async function GET() {
   const session = await getServerSession(authOptions)
 
-  if (!session || !session.user || !session.user.isAdmin) {
+  if (!session || !session.user.isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -28,7 +28,7 @@ export async function GET() {
           totalRaised: { $sum: "$raised" },
         },
       },
-    ]) as unknown as { _id: null; totalRaised: number }[]
+    ])
 
     const totalFundsRaised = campaignsAggregate.length > 0 ? campaignsAggregate[0].totalRaised : 0
 
@@ -59,4 +59,3 @@ export async function GET() {
     })
   }
 }
-

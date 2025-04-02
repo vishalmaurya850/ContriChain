@@ -1,55 +1,64 @@
-import { EditCampaignForm } from "@/components/edit-campaign-form"
-import { getCampaignById } from "@/lib/campaign-service-server"
-import { notFound, redirect } from "next/navigation"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth-options"
-import type { Metadata } from "next"
+import { EditCampaignForm } from "@/components/edit-campaign-form";
+import { getCampaignById } from "@/lib/campaign-service-server";
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth-options";
+import type { Metadata } from "next";
 
 interface EditCampaignPageProps {
-  params: Promise<{
-    id: string
-  }>
+  params: Promise<{ id: string }>; // Update params to be a Promise
 }
 
 export async function generateMetadata({ params }: EditCampaignPageProps): Promise<Metadata> {
-  const { id } = await params // Await the params to resolve the promise
-  const rawCampaign = await getCampaignById(id)
-  const campaign = rawCampaign && 'userId' in rawCampaign && 'description' in rawCampaign && 'status' in rawCampaign
-    ? rawCampaign as { id: string; title?: string; userId: string; description: string; status: "active" | "paused" | "completed"; imageUrl?: string }
-    : null
+  const { id } = await params; // Await the params to resolve the Promise
+  const campaignData = await getCampaignById(id);
 
-  if (!campaign) {
+  const campaign = campaignData
+    ? {
+        ...campaignData,
+        description: "No description provided",
+      }
+    : null;
+
+  if (!campaign || !campaign.title) {
     return {
       title: "Campaign Not Found | CryptoFund",
-    }
+    };
   }
 
   return {
-    title: `Edit ${campaign.title || "Untitled Campaign"} | CryptoFund`,
+    title: `Edit ${campaign.title} | CryptoFund`,
     description: `Edit your campaign: ${campaign.title}`,
-  }
+  };
 }
 
 export default async function EditCampaignPage({ params }: EditCampaignPageProps) {
-  const { id } = await params // Await the params to resolve the promise
-  const session = await getServerSession(authOptions)
+  const { id } = await params; // Await the params to resolve the Promise
+  const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect(`/login?callbackUrl=/campaigns/${id}/edit`)
+    redirect(`/login?callbackUrl=/campaigns/${id}/edit`);
   }
 
-  const rawCampaign = await getCampaignById(id)
-  const campaign = rawCampaign && 'userId' in rawCampaign && 'description' in rawCampaign && 'status' in rawCampaign
-    ? rawCampaign as { id: string; title?: string; userId: string; description: string; status: "active" | "paused" | "completed"; imageUrl?: string }
-    : null
+  const campaignData = await getCampaignById(id);
+
+  const campaign = campaignData
+    ? {
+        ...campaignData,
+        description: campaignData.description || "No description provided",
+        status: (["active", "paused", "completed"].includes(campaignData.status ?? "")
+          ? campaignData.status
+          : "active") as "active" | "paused" | "completed",
+      }
+    : null;
 
   if (!campaign) {
-    notFound()
+    notFound();
   }
 
   // Check if user is the owner or an admin
-  if (!session.user || (campaign.userId !== session.user.id && !session.user.isAdmin)) {
-    redirect(`/campaigns/${id}`)
+  if (campaign.userId !== session.user.id && !session.user.isAdmin) {
+    redirect(`/campaigns/${id}`);
   }
 
   return (
@@ -60,8 +69,8 @@ export default async function EditCampaignPage({ params }: EditCampaignPageProps
           <p className="text-muted-foreground">Update your campaign details</p>
         </div>
 
-        <EditCampaignForm campaign={{ ...campaign, title: campaign.title || "Untitled Campaign", description: campaign.description, status: campaign.status }} />
+        <EditCampaignForm campaign={campaign} />
       </div>
     </main>
-  )
+  );
 }

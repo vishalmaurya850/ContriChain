@@ -11,4 +11,3 @@ if (apiKey) {
 }
 
 export default finnhubClient
-

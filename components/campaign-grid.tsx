@@ -50,7 +50,14 @@ export function CampaignGrid() {
           filteredCampaigns = filteredCampaigns.filter((c) => c.deadline - nowInSeconds <= sevenDaysInSeconds)
         }
 
-        setCampaigns(filteredCampaigns)
+        setCampaigns(
+          filteredCampaigns.map((campaign) => ({
+            ...campaign,
+            userId: campaign.userId || "",
+            userName: campaign.userName || "Unknown",
+            createdAt: campaign.createdAt ? new Date(campaign.createdAt) : new Date(),
+          }))
+        )
       } catch (error) {
         console.error("Error fetching campaigns:", error)
       } finally {
@@ -122,4 +129,3 @@ export function CampaignGrid() {
     </div>
   )
 }
-

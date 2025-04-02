@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
+import { Session } from "next-auth"
 import { getCollection, countDocuments } from "@/lib/mongodb-admin"
 
-export async function GET(request: Request) {
-  const session = await getServerSession(authOptions)
+  export async function GET(request: Request) {
+    const session = await getServerSession(authOptions) as Session & { user: { isAdmin?: boolean } }
 
-  if (!session || !session.user || !session.user.isAdmin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+  if (!session?.user?.isAdmin) {
+    }
   try {
     // Get URL parameters
     const { searchParams } = new URL(request.url)
@@ -67,4 +66,3 @@ export async function GET(request: Request) {
     })
   }
 }
-

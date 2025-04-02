@@ -14,50 +14,50 @@ const updateCampaignSchema = z.object({
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    // Await the params to resolve the promise
-    const { id } = await context.params
+    // Await the params to resolve the Promise
+    const { id } = await context.params;
 
-    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
     return NextResponse.json({
       id: campaign._id.toString(),
       ...campaign,
       _id: undefined,
-    })
+    });
   } catch (error) {
-    console.error("Error fetching campaign:", error)
-    return NextResponse.json({ error: "Failed to fetch campaign" }, { status: 500 })
+    console.error("Error fetching campaign:", error);
+    return NextResponse.json({ error: "Failed to fetch campaign" }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // Await the params to resolve the promise
-    const { id } = await context.params
+    // Await the params to resolve the Promise
+    const { id } = await context.params;
 
-    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    const userIsAdmin = session.user?.isAdmin ?? false
-    if (!session.user || (campaign.userId !== session.user.id && !userIsAdmin)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const userIsAdmin = session.user.isAdmin;
+    if (campaign.userId !== session.user.id && !userIsAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body = await request.json()
-    const validatedData = updateCampaignSchema.parse(body)
+    const body = await request.json();
+    const validatedData = updateCampaignSchema.parse(body);
 
     await updateOne(
       "campaigns",
@@ -68,56 +68,56 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           updatedAt: new Date(),
         },
       },
-    )
+    );
 
-    const updatedCampaign = await findOne("campaigns", { _id: createObjectId(id) })
+    const updatedCampaign = await findOne("campaigns", { _id: createObjectId(id) });
 
     if (!updatedCampaign) {
-      return NextResponse.json({ error: "Updated campaign not found" }, { status: 404 })
+      return NextResponse.json({ error: "Failed to retrieve updated campaign" }, { status: 500 });
     }
 
     return NextResponse.json({
       id: updatedCampaign._id.toString(),
       ...updatedCampaign,
       _id: undefined,
-    })
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 });
     }
 
-    console.error("Error updating campaign:", error)
-    return NextResponse.json({ error: "Failed to update campaign" }, { status: 500 })
+    console.error("Error updating campaign:", error);
+    return NextResponse.json({ error: "Failed to update campaign" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions);
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // Await the params to resolve the promise
-    const { id } = await context.params
+    // Await the params to resolve the Promise
+    const { id } = await context.params;
 
-    const campaign = await findOne("campaigns", { _id: createObjectId(id) })
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    const userIsAdmin = session.user?.isAdmin ?? false
-    if (!session.user || (campaign.userId !== session.user.id && !userIsAdmin)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const userIsAdmin = session.user.isAdmin;
+    if (campaign.userId !== session.user.id && !userIsAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await deleteOne("campaigns", { _id: createObjectId(id) })
+    await deleteOne("campaigns", { _id: createObjectId(id) });
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting campaign:", error)
-    return NextResponse.json({ error: "Failed to delete campaign" }, { status: 500 })
+    console.error("Error deleting campaign:", error);
+    return NextResponse.json({ error: "Failed to delete campaign" }, { status: 500 });
   }
 }

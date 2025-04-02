@@ -12,7 +12,18 @@ import { useToast } from "@/hooks/use-toast"
 
 export function UserCampaigns() {
   const { data: session } = useSession()
-  const { campaigns, isLoading, mutate } = useUserCampaigns(session?.user?.id) as { campaigns: Array<{ id: string; title: string; description: string; raised: number; goal: number; createdAt: string; status: string; deadline: number }>, isLoading: boolean, mutate: () => void }
+  const { campaigns, isLoading, mutate } = useUserCampaigns(session?.user?.id)
+
+  type Campaign = {
+    id: string
+    title: string
+    description: string
+    createdAt: string
+    status: string
+    raised: number
+    goal: number
+    deadline: number
+  }
   const { toast } = useToast()
 
   const handleDeleteCampaign = async (id: string) => {
@@ -68,18 +79,19 @@ export function UserCampaigns() {
   if (campaigns.length === 0) {
     return (
       <Card className="text-center p-6">
-        <CardTitle className="mb-2">No Campaigns Yet</CardTitle>
-        <CardDescription className="mb-4">You haven&apos;t created any campaigns yet.</CardDescription>
-        <Link href="/create">
-          <Button>Create Your First Campaign</Button>
-        </Link>
+        <>
+          <CardDescription className="mb-4">You haven&apos;t created any campaigns yet.</CardDescription>
+          <Link href="/create">
+            <Button>Create Your First Campaign</Button>
+          </Link>
+        </>
       </Card>
     )
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {campaigns.map((campaign) => {
+      {campaigns.map((campaign: Campaign) => {
         const raisedAmount = campaign.raised
         const goalAmount = campaign.goal
         const progress = Math.min(Math.round((raisedAmount / goalAmount) * 100), 100)
@@ -129,4 +141,3 @@ export function UserCampaigns() {
     </div>
   )
 }
-

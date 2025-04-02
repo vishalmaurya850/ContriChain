@@ -13,10 +13,9 @@ export async function getUserById(id: string): Promise<User | null> {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      image: user.image,
       isAdmin: user.isAdmin,
       createdAt: user.createdAt,
-      image: user.image,
-      walletAddress: user.walletAddress,
       _id: undefined,
       password: undefined, // Don't return password
     } as User
@@ -38,10 +37,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      image: user.image,
       isAdmin: user.isAdmin,
       createdAt: user.createdAt,
-      image: user.image,
-      walletAddress: user.walletAddress,
       _id: undefined,
       password: undefined, // Don't return password
     } as User
@@ -65,7 +63,7 @@ export async function createUser(data: {
       createdAt: new Date(),
     }
 
-    const result = await insertOne("users", user as unknown as Document)
+    const result = await insertOne("users", user)
 
     return {
       id: result.insertedId.toString(),
@@ -88,7 +86,7 @@ export async function updateUserWallet(userId: string, walletAddress: string): P
           updatedAt: new Date(),
         },
       },
-    ) as { modifiedCount: number }
+    )
 
     return result.modifiedCount === 1
   } catch (error) {
@@ -111,7 +109,7 @@ export async function updateUserProfile(
           updatedAt: new Date(),
         },
       },
-    ) as { modifiedCount: number }
+    )
 
     return result.modifiedCount === 1
   } catch (error) {
@@ -119,4 +117,3 @@ export async function updateUserProfile(
     throw error
   }
 }
-

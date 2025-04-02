@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,12 +33,7 @@ export function StockMarketDashboard() {
   const [stocks, setStocks] = useState<StockData[]>([])
   const { toast } = useToast()
 
-  // Load initial stock data
-  useEffect(() => {
-    fetchDefaultStocks()
-  }, [])
-
-  const fetchDefaultStocks = async () => {
+  const fetchDefaultStocks = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await fetch("/api/stocks/trending")
@@ -57,7 +52,12 @@ export function StockMarketDashboard() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
+
+  // Load initial stock data
+  useEffect(() => {
+    fetchDefaultStocks()
+  }, [fetchDefaultStocks])
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -14,19 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAdminUsers, toggleUserAdmin } from "@/lib/admin-service-client"
 
 export function AdminUserList() {
-  const { users, isLoading, mutate } = useAdminUsers() as {
-    users: Array<{
-      id: string
-      name?: string
-      email?: string
-      walletAddress?: string
-      image?: string
-      isAdmin: boolean
-      createdAt: string
-    }>
-    isLoading: boolean
-    mutate: () => void
-  }
+  const { users, isLoading, mutate } = useAdminUsers() as { users: Array<{ id: string; name?: string; email?: string; walletAddress?: string; isAdmin: boolean; createdAt: string; image?: string }>, isLoading: boolean, mutate: () => void }
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
 
@@ -51,7 +39,7 @@ export function AdminUserList() {
     }
   }
 
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = users.filter((user: { id: string; name?: string; email?: string; walletAddress?: string; isAdmin: boolean; createdAt: string; image?: string }) => {
     return (
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||

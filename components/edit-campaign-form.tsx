@@ -33,6 +33,7 @@ interface EditCampaignFormProps {
     description: string
     imageUrl?: string
     status: "active" | "paused" | "completed"
+    [key: string]: unknown
   }
 }
 
@@ -143,4 +144,3 @@ export function EditCampaignForm({ campaign }: EditCampaignFormProps) {
     </Card>
   )
 }
-

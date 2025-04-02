@@ -1,16 +1,16 @@
-import { AIAssistant } from "@/components/ai-assistant"
 import { StockMarketDashboard } from "@/components/stock-market-dashboard"
+import { StockAdvisor } from "@/components/stock-advisor"
 import type { Metadata } from "next"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { redirect } from "next/navigation"
 
 export const metadata: Metadata = {
-  title: "AI Assistant | CryptoFund",
-  description: "Get funding advice and stock market predictions from our AI assistant",
+  title: "Stock Advisor | CryptoFund",
+  description: "Get stock market predictions and insights from our AI advisor",
 }
 
-export default async function AIAssistantPage() {
+export default async function StockAdvisorPage() {
   const session = await getServerSession(authOptions)
 
   if (!session) {
@@ -20,13 +20,13 @@ export default async function AIAssistantPage() {
   return (
     <main className="container px-4 py-12 md:px-6 md:py-16">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-2">AI Assistant</h1>
-        <p className="text-muted-foreground">Get funding advice and stock market predictions</p>
+        <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-2">Stock Advisor</h1>
+        <p className="text-muted-foreground">Get real-time stock market data and AI-powered predictions</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <AIAssistant />
+          <StockAdvisor />
         </div>
         <div>
           <StockMarketDashboard />

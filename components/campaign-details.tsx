@@ -10,7 +10,7 @@ import { Calendar, Clock, ExternalLink, Share2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { claimFundsOnChain, claimRefundOnChain } from "@/lib/contract-utils"
-import { JsonRpcProvider } from "ethers"
+import { Web3Provider} from "@ethersproject/providers"
 import type { Campaign } from "@/lib/models/types"
 
 interface CampaignDetailsProps {
@@ -45,7 +45,7 @@ export function CampaignDetails({ campaign }: CampaignDetailsProps) {
     setIsProcessing(true)
 
     try {
-      const provider = new JsonRpcProvider(window.ethereum)
+      const provider = new Web3Provider(window.ethereum)
       await window.ethereum.request({ method: "eth_requestAccounts" })
 
       await claimFundsOnChain(provider, campaign.onChainId)
@@ -94,7 +94,7 @@ export function CampaignDetails({ campaign }: CampaignDetailsProps) {
     setIsProcessing(true)
 
     try {
-      const provider = new JsonRpcProvider(window.ethereum)
+      const provider = new Web3Provider(window.ethereum)
       await window.ethereum.request({ method: "eth_requestAccounts" })
 
       await claimRefundOnChain(provider, campaign.onChainId)

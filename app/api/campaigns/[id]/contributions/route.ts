@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server"
-import { findMany } from "@/lib/mongodb-admin"
+import { NextResponse } from "next/server";
+import { findMany } from "@/lib/mongodb-admin";
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    // Await the params to resolve the promise
-    const { id } = await context.params
+    // Await the params to resolve the Promise
+    const { id } = await context.params;
 
     // Get contributions for this campaign
-    const contributions = await findMany("contributions", { campaignId: id })
+    const contributions = await findMany("contributions", { campaignId: id });
 
     return NextResponse.json(
       contributions.map((contribution) => ({
@@ -15,9 +15,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         ...contribution,
         _id: undefined,
       })),
-    )
+    );
   } catch (error) {
-    console.error("Error fetching contributions:", error)
-    return NextResponse.json({ error: "Failed to fetch contributions" }, { status: 500 })
+    console.error("Error fetching contributions:", error);
+    return NextResponse.json({ error: "Failed to fetch contributions" }, { status: 500 });
   }
 }

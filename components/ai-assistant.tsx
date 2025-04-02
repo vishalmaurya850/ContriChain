@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Send, Loader2, LineChart} from "lucide-react"
+import { Send, Loader2, LineChart, DollarSign } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Message {
@@ -106,11 +107,11 @@ export function AIAssistant() {
           </div>
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-          <TabsList className="grid w-full">
-            {/* <TabsTrigger value="funding" className="flex items-center gap-1">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="funding" className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
               Funding Advice
-            </TabsTrigger> */}
+            </TabsTrigger>
             <TabsTrigger value="stocks" className="flex items-center gap-1">
               <LineChart className="h-4 w-4" />
               Stock Predictions

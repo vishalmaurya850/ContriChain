@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname} from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, LogOut, FileText, LineChart } from "lucide-react"
@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
-  // const router = useRouter()
+  const router = useRouter()
   const { data: session, status } = useSession()
   const isLoading = status === "loading"
 
@@ -33,7 +33,8 @@ export function Navbar() {
   // Handle sign out with redirect
   const handleSignOut = async () => {
     await signOut({ redirect: false })
-    window.location.href = "/login"
+    router.push("/")
+    router.refresh()
   }
 
   return (
@@ -100,7 +101,7 @@ export function Navbar() {
                     >
                       Profile
                     </Link>
-                    {session.user?.isAdmin && (
+                    {session.user.isAdmin && (
                       <Link
                         href="/admin"
                         className={`text-sm font-medium ${pathname === "/admin" ? "text-primary" : "text-muted-foreground"}`}
@@ -173,9 +174,9 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.user?.image || ""} alt={session.user?.name || ""} />
+                      <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
                       <AvatarFallback>
-                        {session.user?.name?.charAt(0) || session.user?.email?.charAt(0) || "U"}
+                        {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -183,8 +184,8 @@ export function Navbar() {
                 <DropdownMenuContent align="end">
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
-                      {session.user?.name && <p className="font-medium">{session.user.name}</p>}
-                      {session.user?.email && (
+                      {session.user.name && <p className="font-medium">{session.user.name}</p>}
+                      {session.user.email && (
                         <p className="w-[200px] truncate text-sm text-muted-foreground">{session.user.email}</p>
                       )}
                     </div>
@@ -202,7 +203,7 @@ export function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Profile</Link>
                   </DropdownMenuItem>
-                  {session.user?.isAdmin && (
+                  {session.user.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">Admin</Link>
                     </DropdownMenuItem>

@@ -9,8 +9,8 @@ import { useMemo } from "react"
 
 export function UserStats() {
   const { data: session } = useSession()
-  const { campaigns, isLoading: campaignsLoading }: { campaigns: { status: string }[]; isLoading: boolean } = useUserCampaigns(session?.user?.id)
-  const { contributions, isLoading: contributionsLoading }: { contributions: { amount: number; campaignId: string }[]; isLoading: boolean } = useUserContributions(session?.user?.id)
+  const { campaigns, isLoading: campaignsLoading } = useUserCampaigns(session?.user?.id) as { campaigns: { status: string }[]; isLoading: boolean }
+  const { contributions, isLoading: contributionsLoading } = useUserContributions(session?.user?.id) as { contributions: { amount: number; campaignId: string }[]; isLoading: boolean }
 
   const isLoading = campaignsLoading || contributionsLoading
 
@@ -26,7 +26,7 @@ export function UserStats() {
 
     const activeCampaigns = campaigns.filter((c: { status: string }) => c.status === "active").length
     const totalContributed = contributions.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0)
-    const uniqueCampaignIds = new Set(contributions.map((c) => c.campaignId))
+    const uniqueCampaignIds = new Set(contributions.map((c: { campaignId: string }) => c.campaignId))
 
     return {
       totalCampaigns: campaigns.length,
@@ -92,4 +92,3 @@ export function UserStats() {
     </div>
   )
 }
-

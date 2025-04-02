@@ -1,8 +1,6 @@
 import { ArrowRight, Coins, FileCheck, Users } from "lucide-react"
 
-
 export function HowItWorks() {
-
   return (
     <section className="py-12 md:py-24 bg-muted/50">
       <div className="container px-4 md:px-6">
@@ -54,4 +52,3 @@ export function HowItWorks() {
     </section>
   )
 }
-

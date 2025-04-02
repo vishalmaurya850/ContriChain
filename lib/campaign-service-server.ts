@@ -1,5 +1,14 @@
 import { findMany, findOne, createObjectId } from "@/lib/mongodb-admin"
 
+export interface Campaign {
+  id: string;
+  title: string;
+  description: string;
+  userId: string;
+  status: string;
+  // Add other fields as necessary
+}
+
 export async function getAllCampaigns(options?: {
   category?: string
   status?: string
@@ -36,7 +45,7 @@ export async function getAllCampaigns(options?: {
   }
 }
 
-export async function getCampaignById(id: string) {
+export async function getCampaignById(id: string): Promise<{ id: string; userId: string; title: string; description?: string; status?: string } | null> {
   try {
     const campaign = await findOne("campaigns", { _id: createObjectId(id) })
 
@@ -44,10 +53,11 @@ export async function getCampaignById(id: string) {
       return null
     }
 
+    const { _id, ...rest } = campaign;
     return {
-      id: campaign._id.toString(),
-      ...campaign,
-      _id: undefined,
+      id: _id.toString(),
+      userId: rest.userId,
+      title: rest.title,
     }
   } catch (error) {
     console.error("Error getting campaign:", error)

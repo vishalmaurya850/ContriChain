@@ -50,9 +50,6 @@ export async function POST(request: Request) {
     const validatedData = campaignSchema.parse(body)
 
     // Get user data from MongoDB
-    if (!session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
     const user = await findOne("users", { _id: new ObjectId(session.user.id) })
 
     if (!user) {
@@ -74,7 +71,7 @@ export async function POST(request: Request) {
       createdAt: new Date(),
     }
 
-    const result = await insertOne("campaigns", campaignData as unknown as Document)
+    const result = await insertOne("campaigns", campaignData)
 
     return NextResponse.json(
       {

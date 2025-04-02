@@ -21,10 +21,6 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { currentPassword, newPassword } = passwordSchema.parse(body)
 
-    if (!session.user) {
-      return NextResponse.json({ error: "User session is invalid" }, { status: 400 })
-    }
-
     // For development with mock DB, return success
     if (process.env.NODE_ENV === "development" && (process.env.USE_MOCK_DB === "true" || !process.env.MONGODB_URI)) {
       return NextResponse.json({ success: true })
@@ -34,7 +30,7 @@ export async function POST(request: Request) {
     const { findOne, updateOne, createObjectId } = await import("@/lib/mongodb-admin")
 
     // Get user from database
-    const user = await findOne("users", { _id: createObjectId((session.user as { id: string }).id) })
+    const user = await findOne("users", { _id: createObjectId(session.user.id) })
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -53,7 +49,7 @@ export async function POST(request: Request) {
     // Update password in database
     await updateOne(
       "users",
-      { _id: createObjectId((session.user as { id: string }).id) },
+      { _id: createObjectId(session.user.id) },
       {
         $set: {
           password: hashedPassword,

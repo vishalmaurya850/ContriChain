@@ -1,26 +1,24 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-options";
-import { updateOne, createObjectId } from "@/lib/mongodb-admin";
-import { z } from "zod";
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth-options"
+import { updateOne, createObjectId } from "@/lib/mongodb-admin"
+import { z } from "zod"
 
 const toggleAdminSchema = z.object({
   isAdmin: z.boolean(),
-});
+})
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || !session.user || !session.user.isAdmin) {
+  if (!session || !session.user.isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
+    const { id } = await context.params; // Await the params to resolve the Promise
     const body = await request.json();
     const { isAdmin } = toggleAdminSchema.parse(body);
-
-    // Await the params to resolve the promise
-    const { id } = await context.params;
 
     // Update user in MongoDB
     await updateOne(
@@ -28,7 +26,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       { _id: createObjectId(id) },
       {
         $set: {
-          isAdmin: isAdmin,
+          isAdmin,
           updatedAt: new Date(),
         },
       },

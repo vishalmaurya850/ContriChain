@@ -1,37 +1,14 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-options";
-import { z } from "zod";
-import { findOne, insertOne, updateOne, createObjectId } from "@/lib/mongodb-admin";
-import { ObjectId } from "mongodb";
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth-options"
+import { z } from "zod"
+import { findOne, insertOne, updateOne, createObjectId } from "@/lib/mongodb-admin"
 
-interface Campaign {
-  _id: ObjectId;
-  title: string;
-  raised: number; // Ensure this matches your database schema
-}
-
-interface CustomDocument {
-  _id: ObjectId;
-  [key: string]: unknown;
-}
-
-interface TransactionDocument extends CustomDocument {
-  type: string;
-  campaignId: string;
-  campaignTitle: string;
-  userId: string;
-  userName: string;
-  amount: number;
-  transactionHash: string;
-  timestamp: Date;
-  status: string;
-}
-
+// Schema for contribution
 const contributionSchema = z.object({
   amount: z.number().positive(),
   transactionHash: z.string(),
-});
+})
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -41,27 +18,29 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   try {
+    // Await the params to resolve the Promise
     const { id } = await context.params;
 
-    const campaign = await findOne<Campaign>("campaigns", { _id: createObjectId(id) });
+    // Check if campaign exists
+    const campaign = await findOne("campaigns", { _id: createObjectId(id) });
 
     if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
     const body = await request.json();
+
+    // Validate request body
     const validatedData = contributionSchema.parse(body);
 
-    if (!session.user) {
-      return NextResponse.json({ error: "User session is invalid" }, { status: 400 });
-    }
-
+    // Get user data
     const user = await findOne("users", { _id: createObjectId(session.user.id) });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Create contribution in MongoDB
     const contributionData = {
       campaignId: id,
       campaignTitle: campaign.title,
@@ -73,16 +52,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       timestamp: new Date(),
     };
 
-    const contributionResult = await insertOne("contributions", contributionData as unknown as Document);
+    const contributionResult = await insertOne("contributions", contributionData);
 
-    await updateOne<Campaign>(
+    // Update campaign raised amount
+    await updateOne(
       "campaigns",
       { _id: createObjectId(id) },
-      { $set: { raised: campaign.raised + validatedData.amount } } as unknown as Partial<Campaign>,
+      {
+        $set: {
+          raised: campaign.raised + validatedData.amount,
+        },
+      },
     );
 
-    const transactionData: TransactionDocument = {
-      _id: new ObjectId(),
+    // Create transaction record
+    await insertOne("transactions", {
       type: "contribution",
       campaignId: id,
       campaignTitle: campaign.title,
@@ -92,9 +76,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       transactionHash: validatedData.transactionHash,
       timestamp: new Date(),
       status: "confirmed",
-    };
-
-    await insertOne("transactions", transactionData as unknown as Document);
+    });
 
     return NextResponse.json(
       {

@@ -25,7 +25,6 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
   const { toast } = useToast()
@@ -43,7 +42,6 @@ export function LoginForm() {
     setError(null)
 
     try {
-
       const result = await signIn("credentials", {
         redirect: false,
         email: data.email.toLowerCase(),

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { JsonRpcProvider } from "ethers"
+import { Web3Provider } from "@ethersproject/providers"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -57,8 +57,7 @@ export function ContributionForm({ campaign }: ContributionFormProps) {
     setIsContributing(true)
 
     try {
-      // Connect to provider
-      const provider = new JsonRpcProvider(window.ethereum)
+      const provider = new Web3Provider(window.ethereum)
 
       // Request account access
       await window.ethereum.request({ method: "eth_requestAccounts" })

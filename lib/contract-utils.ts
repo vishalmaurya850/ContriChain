@@ -1,4 +1,5 @@
-import { ethers, parseEther, Interface } from "ethers"
+import { ethers, JsonRpcProvider, Signer, parseEther, Interface } from "ethers"
+import { Web3Provider } from "@ethersproject/providers"
 import CrowdfundingABI from "@/contracts/CrowdfundingABI.json"
 import { contractAddress } from "@/lib/contract-address"
 
@@ -63,7 +64,7 @@ export async function getFeaturedCampaign() {
   }
 }
 
-export function getCrowdfundingContract(provider: ethers.JsonRpcProvider | ethers.Signer) {
+export function getCrowdfundingContract(provider: JsonRpcProvider | Signer) {
   if (!contractAddress) {
     throw new Error("Contract address is not set")
   }
@@ -72,7 +73,7 @@ export function getCrowdfundingContract(provider: ethers.JsonRpcProvider | ether
 }
 
 export async function createCampaignOnChain(
-  provider: ethers.JsonRpcProvider,
+  provider: Web3Provider,
   title: string,
   description: string,
   goal: number,
@@ -83,8 +84,8 @@ export async function createCampaignOnChain(
     throw new Error("Contract address is not set")
   }
 
-  const signer = await provider.getSigner()
-  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer)
+  const signer = provider.getSigner()
+  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer as unknown as ethers.Signer)
 
   const goalInWei = parseEther(goal.toString())
 
@@ -96,7 +97,7 @@ export async function createCampaignOnChain(
     const receipt = await provider.getTransactionReceipt(tx.hash)
     const iface = new Interface(CrowdfundingABI)
 
-    if (!receipt || !receipt.logs) {
+    if (!receipt.logs) {
       throw new Error("No logs found in transaction receipt")
     }
 
@@ -118,22 +119,17 @@ export async function createCampaignOnChain(
 
     return { campaignId: campaignId, transactionHash: tx.hash }
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error("Error creating campaign on chain:", error.message)
-    } else {
-      console.error("Error creating campaign on chain:", error)
-    }
-    throw new Error(`An error occurred while processing the transaction: ${error instanceof Error ? error.message : String(error)}`)
+    console.error("Error creating campaign on chain:", error)
+    throw error
   }
 }
-
-export async function contributeToChain(provider: ethers.JsonRpcProvider, campaignId: string, amount: number) {
+export async function contributeToChain(provider: Web3Provider, campaignId: string, amount: number) {
   if (!contractAddress) {
     throw new Error("Contract address is not set")
   }
 
-  const signer = await provider.getSigner()
-  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer)
+  const signer = provider.getSigner()
+  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer as unknown as ethers.ContractRunner)
 
   const amountInWei = parseEther(amount.toString())
 
@@ -142,56 +138,43 @@ export async function contributeToChain(provider: ethers.JsonRpcProvider, campai
     await tx.wait()
     return { transactionHash: tx.hash }
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error("Error contributing to campaign:", error.message)
-    } else {
-      console.error("Error contributing to campaign:", error)
-    }
+    console.error("Error contributing to campaign:", error)
     throw error
   }
 }
 
-export async function claimFundsOnChain(provider: ethers.JsonRpcProvider, campaignId: string) {
+export async function claimFundsOnChain(provider: Web3Provider, campaignId: string) {
   if (!contractAddress) {
     throw new Error("Contract address is not set")
   }
 
-  const signer = await provider.getSigner()
-  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer)
+  const signer = provider.getSigner()
+  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer as unknown as ethers.Signer)
 
   try {
     const tx = await contract.claimFunds(campaignId)
     await tx.wait()
     return { transactionHash: tx.hash }
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error("Error claiming funds:", error.message)
-    } else {
-      console.error("Error claiming funds:", error)
-    }
+    console.error("Error claiming funds:", error)
     throw error
   }
 }
 
-export async function claimRefundOnChain(provider: ethers.JsonRpcProvider, campaignId: string) {
+export async function claimRefundOnChain(provider: Web3Provider, campaignId: string) {
   if (!contractAddress) {
     throw new Error("Contract address is not set")
   }
 
-  const signer = await provider.getSigner()
-  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer)
+  const signer = provider.getSigner()
+  const contract = new ethers.Contract(contractAddress, CrowdfundingABI, signer as unknown as ethers.ContractRunner)
 
   try {
     const tx = await contract.claimRefund(campaignId)
     await tx.wait()
     return { transactionHash: tx.hash }
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error("Error claiming refund:", error.message)
-    } else {
-      console.error("Error claiming refund:", error)
-    }
+    console.error("Error claiming refund:", error)
     throw error
   }
 }
-

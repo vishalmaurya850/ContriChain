@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAllCampaigns, deleteCampaign } from "@/lib/campaign-service"
 
 export function AdminCampaignList() {
-  const { campaigns, isLoading, mutate } = useAllCampaigns() as { campaigns: { id: string; title: string; userName: string; goal: number; raised: number; status: string; createdAt: string }[], isLoading: boolean, mutate: () => void }
+  const { campaigns, isLoading, mutate } = useAllCampaigns() as { campaigns: Array<{ id: string; title: string; userName: string; goal: number; raised: number; status: string; createdAt: string }>, isLoading: boolean, mutate: () => void }
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
 
@@ -43,7 +43,7 @@ export function AdminCampaignList() {
     }
   }
 
-  const filteredCampaigns = campaigns.filter((campaign: { id: string; title: string; userName: string; goal: number; raised: number; status: string; createdAt: string }) => {
+  const filteredCampaigns = campaigns.filter((campaign: { title: string; userName: string }) => {
     return (
       campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.userName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -152,4 +152,3 @@ export function AdminCampaignList() {
     </Card>
   )
 }
-
