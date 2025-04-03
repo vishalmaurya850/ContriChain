@@ -181,6 +181,11 @@ export function StockAdvisor() {
     }
   }
 
+  // Format time consistently to avoid hydration errors
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+  }
+
   return (
     <Card className="h-[600px] flex flex-col">
       <CardHeader className="pb-4">
@@ -225,9 +230,7 @@ export function StockAdvisor() {
                       }`}
                     >
                       <p className="text-sm">{message.content}</p>
-                      <p className="mt-1 text-xs opacity-70">
-                        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </p>
+                      <p className="mt-1 text-xs opacity-70">{formatTime(message.timestamp)}</p>
                     </div>
                   </div>
                 ))}

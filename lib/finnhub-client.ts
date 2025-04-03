@@ -1,4 +1,4 @@
-import finnhub from "finnhub"
+import * as finnhub from "finnhub"
 
 // Create a Finnhub API client
 const apiKey = process.env.FINNHUB_API_KEY || ""

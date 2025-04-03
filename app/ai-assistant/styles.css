@@ -1,0 +1,11 @@
+/* Remove the orange dotted outline */
+[data-state="inactive"][data-orientation="horizontal"][role="tabpanel"] {
+    outline: none !important;
+    border: none !important;
+  }
+  
+  .tabs-content {
+    outline: none !important;
+    border: none !important;
+  }
+  

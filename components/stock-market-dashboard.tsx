@@ -11,20 +11,20 @@ import { TrendingUp, TrendingDown, Search, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface StockData {
-  symbol: string
-  price: number
-  change: number
-  changePercent: number
-  high: number
-  low: number
-  open: number
-  prevClose: number
+  symbol: string;
+  price?: number;
+  change?: number;
+  changePercent?: number;
+  high?: number;
+  low?: number;
+  open?: number;
+  prevClose?: number;
   prediction?: {
-    direction: "up" | "down" | "neutral"
-    confidence: number
-    target: number
-    timeframe: string
-  }
+    direction: "up" | "down" | "neutral";
+    confidence: number;
+    target: number;
+    timeframe: string;
+  };
 }
 
 export function StockMarketDashboard() {
@@ -34,23 +34,32 @@ export function StockMarketDashboard() {
   const { toast } = useToast()
 
   const fetchDefaultStocks = useCallback(async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await fetch("/api/stocks/trending")
+      const response = await fetch("/api/stocks/trending");
       if (!response.ok) {
-        throw new Error("Failed to fetch trending stocks")
+        throw new Error("Failed to fetch trending stocks");
       }
-      const data = await response.json()
-      setStocks(data)
+      const data = await response.json();
+  
+      // Filter out stocks with missing or invalid data
+      const validStocks = data.filter(
+        (stock: StockData) =>
+          stock.price !== undefined &&
+          stock.change !== undefined &&
+          stock.changePercent !== undefined
+      );
+  
+      setStocks(validStocks);
     } catch (error) {
-      console.error("Error fetching stocks:", error)
+      console.error("Error fetching stocks:", error);
       toast({
         title: "Error",
         description: "Failed to fetch stock data. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }, [toast])
 
@@ -60,34 +69,39 @@ export function StockMarketDashboard() {
   }, [fetchDefaultStocks])
 
   const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!searchQuery.trim() || isLoading) return
-
-    setIsLoading(true)
+    e.preventDefault();
+    if (!searchQuery.trim() || isLoading) return;
+  
+    setIsLoading(true);
     try {
-      const response = await fetch(`/api/stocks/search?symbol=${searchQuery.toUpperCase()}`)
+      const response = await fetch(`/api/stocks/search?symbol=${searchQuery.toUpperCase()}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch stock data")
+        throw new Error("Failed to fetch stock data");
       }
-      const data = await response.json()
-
+      const data = await response.json();
+  
+      // Validate the response
+      if (data.price === undefined) {
+        throw new Error("Invalid stock data");
+      }
+  
       // Add to the beginning of the list
       setStocks((prev) => {
         // Remove if already exists
-        const filtered = prev.filter((stock) => stock.symbol !== data.symbol)
-        return [data, ...filtered].slice(0, 5) // Keep only top 5
-      })
-
-      setSearchQuery("")
+        const filtered = prev.filter((stock) => stock.symbol !== data.symbol);
+        return [data, ...filtered].slice(0, 5); // Keep only top 5
+      });
+  
+      setSearchQuery("");
     } catch (error) {
-      console.error("Error searching stock:", error)
+      console.error("Error searching stock:", error);
       toast({
         title: "Error",
         description: "Failed to find the stock. Please check the symbol and try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -143,32 +157,44 @@ export function StockMarketDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">{stock.symbol}</div>
-                    <div className="text-2xl font-bold">${stock.price.toFixed(2)}</div>
+                    <div className="text-2xl font-bold">
+                      ${stock.price !== undefined ? stock.price.toFixed(2) : "N/A"}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className={`flex items-center ${stock.change >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      {stock.change >= 0 ? (
+                    <div
+                      className={`flex items-center ${
+                        stock.change !== undefined && stock.change >= 0 ? "text-green-500" : "text-red-500"
+                      }`}
+                    >
+                      {stock.change !== undefined && stock.change >= 0 ? (
                         <TrendingUp className="mr-1 h-4 w-4" />
                       ) : (
                         <TrendingDown className="mr-1 h-4 w-4" />
                       )}
-                      {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
+                      {stock.change !== undefined ? stock.change.toFixed(2) : "N/A"} (
+                      {stock.changePercent !== undefined ? stock.changePercent.toFixed(2) : "N/A"}%)
                     </div>
                     {stock.prediction && (
                       <div className={`text-sm mt-1 ${getPredictionColor(stock.prediction.direction)}`}>
                         Prediction:{" "}
-                        {stock.prediction.direction === "up" ? "↑" : stock.prediction.direction === "down" ? "↓" : "→"}$
-                        {stock.prediction.target.toFixed(2)} ({stock.prediction.timeframe})
+                        {stock.prediction.direction === "up"
+                          ? "↑"
+                          : stock.prediction.direction === "down"
+                          ? "↓"
+                          : "→"}
+                        ${stock.prediction.target.toFixed(2)} ({stock.prediction.timeframe})
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground grid grid-cols-3 gap-2">
-                  <div>Open: ${stock.open.toFixed(2)}</div>
-                  <div>High: ${stock.high.toFixed(2)}</div>
-                  <div>Low: ${stock.low.toFixed(2)}</div>
+                  <div>Open: ${stock.open !== undefined ? stock.open.toFixed(2) : "N/A"}</div>
+                  <div>High: ${stock.high !== undefined ? stock.high.toFixed(2) : "N/A"}</div>
+                  <div>Low: ${stock.low !== undefined ? stock.low.toFixed(2) : "N/A"}</div>
                 </div>
               </div>
+            
             ))
           )}
         </div>

@@ -22,7 +22,6 @@ declare module "finnhub" {
   export class DefaultApi {
     constructor()
     quote(symbol: string, callback: (error: any, data: Quote, response: any) => void): void
-    setApiKey(apiKey: string): void // Our custom method
   }
 
   export const ApiClient: ApiClient
