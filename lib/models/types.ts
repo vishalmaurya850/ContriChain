@@ -80,5 +80,70 @@ export interface ChatSession {
   messages: ChatMessage[]
   createdAt: Date
   updatedAt: Date
-  category: "stocks"
+  category: "stocks" | "funding"
+}
+
+export interface StockPrediction {
+  _id?: ObjectId
+  userId: string
+  symbol: string
+  initialPrice: number
+  predictedPrice: number
+  predictedDirection: "up" | "down" | "neutral"
+  confidence: number
+  timeframe: string
+  createdAt: Date
+  actualOutcome?: {
+    actualPrice: number
+    actualDirection: "up" | "down" | "neutral"
+    accuracy: number
+    verifiedAt: Date
+  }
+  aiReasoning: string
+  technicalFactors: string[]
+  fundamentalFactors: string[]
+  marketConditions: string[]
+}
+
+export interface StockAnalysisRequest {
+  symbol: string
+  message: string
+  sessionId?: string
+  includeHistoricalData?: boolean
+  timeframe?: "short" | "medium" | "long"
+}
+
+export interface LearningFeedback {
+  _id?: ObjectId
+  predictionId: string
+  userId: string
+  accuracy: number
+  feedback: string
+  createdAt: Date
+}
+
+export interface MarketData {
+  _id?: ObjectId
+  date: Date
+  indicators: {
+    vix?: number
+    fedRate?: number
+    unemployment?: number
+    gdp?: number
+    inflation?: number
+    [key: string]: number | undefined
+  }
+  majorIndices: {
+    [index: string]: {
+      value: number
+      change: number
+      changePercent: number
+    }
+  }
+  sectorPerformance: {
+    [sector: string]: {
+      change: number
+      changePercent: number
+    }
+  }
 }

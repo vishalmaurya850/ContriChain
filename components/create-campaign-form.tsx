@@ -87,8 +87,8 @@ export function CreateCampaignForm() {
       // Request account access
       await window.ethereum.request({ method: "eth_requestAccounts" })
 
-      // Create campaign on blockchain
-      const result = await createCampaignOnChain(
+      // Create campaign on blockchain with timeout and better error handling
+      const createOnChainPromise = createCampaignOnChain(
         provider,
         data.title,
         data.description,
@@ -96,6 +96,25 @@ export function CreateCampaignForm() {
         Number(data.duration),
         data.imageUrl || "/placeholder.svg?height=400&width=600",
       )
+
+      // Add timeout to the blockchain operation
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Transaction timeout - check your MetaMask for pending transactions")),
+          60000,
+        ),
+      )
+
+      const result = (await Promise.race([createOnChainPromise, timeoutPromise])) as {
+        campaignId: string
+        transactionHash: string
+      }
+
+      // Show intermediate success message
+      toast({
+        title: "Transaction submitted",
+        description: "Your blockchain transaction is being processed. Please wait...",
+      })
 
       // Create campaign in database
       const response = await fetch("/api/campaigns", {
@@ -116,7 +135,8 @@ export function CreateCampaignForm() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create campaign")
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Failed to create campaign in database")
       }
 
       const campaign = await response.json()
@@ -129,11 +149,29 @@ export function CreateCampaignForm() {
       router.push(`/campaigns/${campaign.id}`)
     } catch (error) {
       console.error("Error creating campaign:", error)
-      toast({
-        title: "Failed to create campaign",
-        description: "There was an error creating your campaign. Please try again.",
-        variant: "destructive",
-      })
+
+      // More specific error messages
+      if (error instanceof Error && error.message?.includes("User denied transaction")) {
+        toast({
+          title: "Transaction cancelled",
+          description: "You cancelled the transaction in MetaMask.",
+          variant: "destructive",
+        })
+      } else if (error instanceof Error && error.message?.includes("timeout")) {
+        toast({
+          title: "Transaction timeout",
+          description:
+            "The transaction is taking longer than expected. Please check MetaMask for pending transactions.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Failed to create campaign",
+          description:
+            error instanceof Error ? error.message : "There was an error creating your campaign. Please try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsSubmitting(false)
     }
